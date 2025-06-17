@@ -42,20 +42,27 @@ io.on("connection", (socket) => {
     games[gameId] = {
       id: gameId,
       players: [socket.id],
-      board: Array(9).fill(null), // Simpler 1D array for the board
+      board: Array(9).fill(null),
       currentPlayer: socket.id,
       state: "waiting_for_player_2",
       winner: null,
     };
     socket.join(gameId); // Player joins a "room" for this game
     console.log(`Game created by ${socket.id} with ID ${gameId}`);
+
+    socket.emit("gameCreated", games[gameId]);
+
     updateLobby(); // Inform everyone about the new game
   });
 
   // JOIN an existing game
   socket.on("joinGame", (gameId) => {
     const game = games[gameId];
-    if (game && game.state === "waiting_for_player_2") {
+    if (
+      game &&
+      game.state === "waiting_for_player_2" &&
+      game.players[0] !== socket.id
+    ) {
       game.players.push(socket.id);
       game.state = "in_progress";
       socket.join(gameId);
