@@ -19,6 +19,37 @@ const PORT = 3000;
 // In a real app, you'd use a database.
 let games = {};
 
+const checkWin = (board) => {
+  const WINNING_COMBINATIONS = [
+    // Rows
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    // Columns
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    // Diagonals
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+
+  for (const combination of WINNING_COMBINATIONS) {
+    const [a, b, c] = combination;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return board[a]; // Returns 'X' or 'O'
+    }
+  }
+
+  return null;
+};
+
+const checkDraw = (board) => {
+  // A draw occurs if every square is filled and there is no winner.
+  // The win is checked first, so we just need to see if the board is full.
+  return board.every((cell) => cell !== null);
+};
+
 io.on("connection", (socket) => {
   console.log(`A user connected: ${socket.id}`);
 
@@ -95,12 +126,19 @@ io.on("connection", (socket) => {
     const symbol = game.players[0] === socket.id ? "X" : "O";
     game.board[index] = symbol;
 
-    // Check for win/draw
-    // (You would implement checkWin and checkDraw functions here)
-    // const winner = checkWin(game.board);
-    // const draw = checkDraw(game.board);
+    const winnerSymbol = checkWin(game.board);
+    if (winnerSymbol) {
+      game.state = "game_over_win";
+      game.winner = socket.id; // The current player is the winner
+      // Broadcast the final game state to show who won
+      return io.to(gameId).emit("gameOver", game);
+    }
 
-    // if (winner) { ... } else if (draw) { ... }
+    if (checkDraw(game.board)) {
+      game.state = "game_over_draw";
+      // Broadcast the final game state
+      return io.to(gameId).emit("gameOver", game);
+    }
 
     // Switch turns
     game.currentPlayer = game.players.find((p) => p !== socket.id);
