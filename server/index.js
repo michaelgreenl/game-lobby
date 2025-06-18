@@ -18,6 +18,7 @@ const PORT = 3000;
 // In-memory storage for our games.
 // In a real app, you'd use a database.
 let games = {};
+const disconnectTimeouts = new Map();
 
 const checkWin = (board) => {
   const WINNING_COMBINATIONS = [
@@ -51,7 +52,35 @@ const checkDraw = (board) => {
 };
 
 io.on("connection", (socket) => {
-  console.log(`A user connected: ${socket.id}`);
+  const playerId = socket.handshake.auth.playerId;
+  console.log(`A user connected: ${playerId} with socket ${socket.id}`);
+
+  let reconnected = false;
+
+  // Find if this playerId is part of any existing game
+  for (const gameId in games) {
+    const game = games[gameId];
+    const playerInGame = game.players.find((p) => p.playerId === playerId);
+
+    // If the player is in a game AND is marked as disconnected
+    if (playerInGame && !playerInGame.isOnline) {
+      console.log(`Player ${playerId} is reconnecting to game ${gameId}`);
+      reconnected = true;
+
+      const timer = disconnectTimeouts.get(playerId);
+      if (timer) {
+        clearTimeout(timer);
+        disconnectTimeouts.delete(playerId);
+      }
+
+      playerInGame.isOnline = true;
+      playerInGame.socketId = socket.id;
+      socket.join(gameId);
+
+      io.to(gameId).emit("gameReconnected", game);
+      break;
+    }
+  }
 
   // Helper function to broadcast the current list of open games
   const updateLobby = () => {
@@ -64,46 +93,50 @@ io.on("connection", (socket) => {
     );
   };
 
-  // Initial lobby update for the new user
-  updateLobby();
+  if (!reconnected) {
+    updateLobby();
+  }
 
   // CREATE a new game
   socket.on("createGame", () => {
     const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
     games[gameId] = {
       id: gameId,
-      players: [socket.id],
+      players: [
+        {
+          playerId: playerId,
+          socketId: socket.id,
+          symbol: "X",
+          isOnline: true,
+        },
+      ],
       board: Array(9).fill(null),
-      currentPlayer: socket.id,
+      currentPlayer: playerId,
       state: "waiting_for_player_2",
       winner: null,
     };
-    socket.join(gameId); // Player joins a "room" for this game
-    console.log(`Game created by ${socket.id} with ID ${gameId}`);
-
+    socket.join(gameId);
     socket.emit("gameCreated", games[gameId]);
-
-    updateLobby(); // Inform everyone about the new game
+    updateLobby();
   });
 
   // JOIN an existing game
   socket.on("joinGame", (gameId) => {
     const game = games[gameId];
-    if (
-      game &&
-      game.state === "waiting_for_player_2" &&
-      game.players[0] !== socket.id
-    ) {
-      game.players.push(socket.id);
+    // Check if the player is already in the game
+    const isPlayer1 = game && game.players[0].playerId === playerId;
+
+    if (game && game.state === "waiting_for_player_2" && !isPlayer1) {
+      // Add the second player's info
+      game.players.push({
+        playerId: playerId,
+        socketId: socket.id,
+        symbol: "O",
+        isOnline: true,
+      });
       game.state = "in_progress";
       socket.join(gameId);
-
-      console.log(`Player ${socket.id} joined game ${gameId}`);
-
-      // Broadcast the updated game state to both players in the room
       io.to(gameId).emit("gameStart", game);
-
-      // Remove the game from the public lobby list
       updateLobby();
     }
   });
@@ -112,24 +145,22 @@ io.on("connection", (socket) => {
   socket.on("makeMove", ({ gameId, index }) => {
     const game = games[gameId];
 
-    // Validation: Is it the player's turn? Is the move valid?
     if (
       !game ||
-      game.currentPlayer !== socket.id ||
+      game.currentPlayer !== playerId ||
       game.board[index] !== null
     ) {
-      // Optionally, send an 'invalidMove' event back to the player
       return;
     }
 
-    // Update board state
-    const symbol = game.players[0] === socket.id ? "X" : "O";
-    game.board[index] = symbol;
+    // Find the player object to get their symbol
+    const player = game.players.find((p) => p.playerId === playerId);
+    game.board[index] = player.symbol;
 
     const winnerSymbol = checkWin(game.board);
     if (winnerSymbol) {
       game.state = "game_over_win";
-      game.winner = socket.id; // The current player is the winner
+      game.winner = playerId; // The current player is the winner
       // Broadcast the final game state to show who won
       return io.to(gameId).emit("gameOver", game);
     }
@@ -140,17 +171,49 @@ io.on("connection", (socket) => {
       return io.to(gameId).emit("gameOver", game);
     }
 
-    // Switch turns
-    game.currentPlayer = game.players.find((p) => p !== socket.id);
-
-    // Broadcast the updated state to everyone in the game room
+    game.currentPlayer = game.players.find(
+      (p) => p.playerId !== playerId,
+    ).playerId;
     io.to(gameId).emit("updateBoard", game);
   });
 
   // ---- Disconnect Handling ----
   socket.on("disconnect", () => {
-    console.log(`A user disconnected: ${socket.id}`);
-    // TODO: Handle user disconnection during a game
+    console.log(`Player ${playerId} disconnected.`);
+
+    // Find the game this player was in
+    let gameToEnd = null;
+    for (const gameId in games) {
+      const game = games[gameId];
+      const player = game.players.find((p) => p.playerId === playerId);
+
+      // We only care about games that are actually in progress
+      if (player && game.state === "in_progress") {
+        player.isOnline = false;
+
+        // Notify the remaining player
+        const opponent = game.players.find((p) => p.playerId !== playerId);
+        if (opponent && opponent.socketId) {
+          io.to(opponent.socketId).emit("playerDisconnected", {
+            message: "Opponent disconnected. Waiting 30s for reconnect...",
+          });
+        }
+
+        // Set a timer to declare a forfeit
+        const timer = setTimeout(() => {
+          console.log(`Game ${gameId} ending due to forfeit.`);
+          game.state = "game_over_win";
+          game.winner = opponent.playerId; // Opponent wins
+          io.to(gameId).emit("gameOver", game);
+          // Clean up the game
+          delete games[gameId];
+        }, 30000); // 30 seconds
+
+        disconnectTimeouts.set(playerId, timer);
+        gameToEnd = game;
+        break;
+      }
+    }
   });
 });
 
