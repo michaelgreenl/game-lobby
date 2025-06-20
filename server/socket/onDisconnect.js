@@ -6,25 +6,29 @@ export function handleDisconnect(io, socket, games, disconnectTimeouts) {
     const game = games[gameId];
     const player = game.players.find((p) => p.playerId === playerId);
 
-    if (player && game.state === "in_progress") {
+    if (player) {
       player.isOnline = false;
 
-      const opponent = game.players.find((p) => p.playerId !== playerId);
-      if (opponent?.socketId) {
-        io.to(opponent.socketId).emit("playerDisconnected", {
-          message: "Opponent disconnected...",
-        });
+      // only start a forfeit timer if the game was actually in progress.
+      if (game.state === "in_progress") {
+        const opponent = game.players.find((p) => p.playerId !== playerId);
+        if (opponent?.socketId) {
+          io.to(opponent.socketId).emit("playerDisconnected", {
+            message: "Opponent disconnected...",
+          });
+        }
+
+        const timer = setTimeout(() => {
+          game.state = "game_over_win";
+          game.winner = opponent.playerId;
+          io.to(gameId).emit("gameOver", game);
+          delete games[gameId];
+          disconnectTimeouts.delete(playerId);
+        }, 30000);
+
+        disconnectTimeouts.set(playerId, timer);
       }
 
-      const timer = setTimeout(() => {
-        game.state = "game_over_win";
-        game.winner = opponent.playerId;
-        io.to(gameId).emit("gameOver", game);
-        delete games[gameId];
-        disconnectTimeouts.delete(playerId);
-      }, 30000);
-
-      disconnectTimeouts.set(playerId, timer);
       break;
     }
   }
