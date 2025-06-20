@@ -5,7 +5,9 @@
       <Lobby :games="games" @create="createGame" @join="joinGame" />
     </div>
     <div v-else>
-      <GameBoard :game="game" @move="makeMove" :playerId="playerId" :opponentDisconnected="opponentDisconnected" />
+      <GameBoard :game="game" @move="makeMove" @create="createGame" @rematch="playAgain" :playerId="playerId"
+        :opponentWantsRematch="opponentWantsRematch" :rematchRequested="rematchRequested"
+        :opponentDisconnected="opponentDisconnected" />
     </div>
   </div>
 </template>
@@ -21,6 +23,8 @@ const playerId = getPlayerId();
 const games = ref([]); // List of open games from server
 const game = ref({});  // The current game the player is in
 const opponentDisconnected = ref(false);
+const rematchRequested = ref(false);
+const opponentWantsRematch = ref(false);
 
 onMounted(() => {
   socket.connect();
@@ -35,6 +39,8 @@ onMounted(() => {
 
   socket.on('gameStart', (gameState) => {
     game.value = gameState;
+    rematchRequested.value = false;
+    opponentWantsRematch.value = false;
   });
 
   socket.on('updateBoard', (gameState) => {
@@ -53,6 +59,12 @@ onMounted(() => {
   socket.on('gameOver', (gameState) => {
     opponentDisconnected.value = false;
     game.value = gameState;
+    rematchRequested.value = false;
+    opponentWantsRematch.value = false;
+  });
+
+  socket.on('opponentWantsRematch', () => {
+    opponentWantsRematch.value = true;
   });
 });
 
@@ -66,5 +78,10 @@ const joinGame = (gameId) => {
 
 const makeMove = (index) => {
   socket.emit('makeMove', { gameId: game.value.id, index });
+};
+
+const playAgain = (gameId) => {
+  rematchRequested.value = true;
+  socket.emit('playerReadyForRematch', gameId);
 };
 </script>

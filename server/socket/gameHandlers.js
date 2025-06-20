@@ -1,10 +1,28 @@
 import { checkWin, checkDraw } from "../game/tictactoe.js";
 
+function resetGameForRematch(game) {
+  // Swap the starting player
+  const player1 = game.players[0];
+  const player2 = game.players[1];
+
+  if (game.currentPlayer === player1.playerId) {
+    game.currentPlayer = player2.playerId;
+  } else {
+    game.currentPlayer = player1.playerId;
+  }
+
+  // Reset game state
+  game.board = Array(9).fill(null);
+  game.winner = null;
+  game.state = "in_progress";
+  game.rematchRequestedBy = [];
+}
+
 // This function will be called once per connecting user.
-// We pass in all the state it needs to operate.
 export function registerGameHandlers(io, socket, games) {
   const { playerId } = socket.handshake.auth;
 
+  // Update open games in lobby
   const updateLobby = () => {
     const openGames = Object.values(games).filter(
       (g) => g.state === "waiting_for_player_2",
@@ -24,6 +42,7 @@ export function registerGameHandlers(io, socket, games) {
       currentPlayer: playerId,
       state: "waiting_for_player_2",
       winner: null,
+      rematchRequestedBy: [],
     };
     socket.join(gameId);
     socket.emit("gameCreated", games[gameId]);
@@ -76,5 +95,29 @@ export function registerGameHandlers(io, socket, games) {
       (p) => p.playerId !== playerId,
     ).playerId;
     io.to(gameId).emit("updateBoard", game);
+  });
+
+  socket.on("playerReadyForRematch", (gameId) => {
+    const game = games[gameId];
+    if (!game) return;
+
+    // Register this player's request
+    if (!game.rematchRequestedBy.includes(playerId)) {
+      game.rematchRequestedBy.push(playerId);
+    }
+
+    // Check if both players are now ready
+    if (game.rematchRequestedBy.length === 2) {
+      // Both player's want rematch
+      resetGameForRematch(game);
+
+      io.to(gameId).emit("gameStart", game);
+    } else {
+      // Only one player is ready. Notify the opponent.
+      const opponent = game.players.find((p) => p.playerId !== playerId);
+      if (opponent?.socketId) {
+        io.to(opponent.socketId).emit("opponentWantsRematch");
+      }
+    }
   });
 }

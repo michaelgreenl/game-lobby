@@ -3,21 +3,26 @@
     <div v-if="props.game.state === 'waiting_for_player_2'" class="inactive-game">
       <p>Waiting for another player to join...</p>
     </div>
+
     <div v-else-if="props.game.state === 'in_progress'" class="active-game">
       <h2>Game in Progress</h2>
       <p>Your symbol: {{ mySymbol }}</p>
       <p v-if="isMyTurn">It's your turn!</p>
       <p v-else>Waiting for opponent...</p>
     </div>
+
     <div v-else-if="props.game.state.includes('game_over')">
       <h2>Game Over!</h2>
       <p v-if="game.state === 'game_over_win'">
-        Winner is: {{ game.winner === socket.id ? 'You!:)' : 'Opponent:`(' }}
+        Winner is: {{ game.winner === props.playerId ? 'You!:)' : 'Opponent:`(' }}
       </p>
-      <p v-if="game.state === 'game_over_draw'">
-        It's a draw!
-      </p>
+      <p v-if="game.state === 'game_over_draw'">It's a draw!</p>
+      <p v-if="rematchRequested">Waiting for opponent...</p>
+      <p v-if="opponentWantsRematch">Opponent wants a rematch!</p>
+      <button @click="emit('create')">New Game</button>
+      <button :class="{ disabled: opponentDisconnected }" @click="emit('rematch', game.id)">Rematch</button>
     </div>
+
     <div class="board" :class="{
       disabled: !isMyTurn || props.opponentDisconnected ||
         props.game.state != 'in_progress'
@@ -36,9 +41,11 @@ const props = defineProps({
   game: Object,
   playerId: String,
   opponentDisconnected: Boolean,
+  rematchRequested: Boolean,
+  opponentWantsRematch: Boolean,
 });
 
-const emit = defineEmits(['move']);
+const emit = defineEmits(['move', 'create', 'rematch']);
 
 const isMyTurn = computed(() => props.game.currentPlayer === props.playerId);
 const mySymbol = computed(() => {
