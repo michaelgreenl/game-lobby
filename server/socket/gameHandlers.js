@@ -1,4 +1,5 @@
 import { checkWin, checkDraw } from "../game/tictactoe.js";
+import { prisma } from "../db.js";
 
 function resetGameForRematch(game) {
   // Swap the starting player
@@ -33,27 +34,67 @@ export function registerGameHandlers(io, socket, games) {
     );
   };
 
-  socket.on("createGame", () => {
-    const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
-    games[gameId] = {
-      id: gameId,
-      players: [{ playerId, socketId: socket.id, symbol: "X", isOnline: true }],
-      board: Array(9).fill(null),
-      currentPlayer: playerId,
-      state: "waiting_for_player_2",
-      winner: null,
-      rematchRequestedBy: [],
-    };
-    socket.join(gameId);
-    socket.emit("gameCreated", games[gameId]);
-    updateLobby();
+  socket.on("createGame", async () => {
+    try {
+      const user = await prisma.user.upsert({
+        where: { id: playerId },
+        update: {},
+        create: { id: playerId },
+      });
+
+      const dbGame = await prisma.game.create({
+        data: {
+          state: "waiting_for_player_2",
+          player1Id: user.id,
+        },
+      });
+
+      const gameId = dbGame.id;
+
+      games[gameId] = {
+        id: gameId,
+        players: [
+          { playerId, socketId: socket.id, symbol: "X", isOnline: true },
+        ],
+        board: Array(9).fill(null),
+        currentPlayer: playerId,
+        state: "waiting_for_player_2",
+        rematchRequestedBy: [],
+      };
+
+      socket.join(gameId);
+      socket.emit("gameCreated", games[gameId]);
+      updateLobby();
+    } catch (error) {
+      console.error("Failed to create game:", error);
+    }
   });
 
-  socket.on("joinGame", (gameId) => {
+  socket.on("joinGame", async (gameId) => {
     const game = games[gameId];
-    const isPlayer1 = game && game.players[0].playerId === playerId;
+    if (
+      !game ||
+      game.state !== "waiting_for_player_2" ||
+      game.players[0].playerId === playerId
+    ) {
+      return;
+    }
 
-    if (game && game.state === "waiting_for_player_2" && !isPlayer1) {
+    try {
+      const user = await prisma.user.upsert({
+        where: { id: playerId },
+        update: {},
+        create: { id: playerId },
+      });
+
+      await prisma.game.update({
+        where: { id: gameId },
+        data: {
+          player2Id: user.id,
+          state: "in_progress",
+        },
+      });
+
       game.players.push({
         playerId,
         socketId: socket.id,
@@ -61,13 +102,16 @@ export function registerGameHandlers(io, socket, games) {
         isOnline: true,
       });
       game.state = "in_progress";
+
       socket.join(gameId);
       io.to(gameId).emit("gameStart", game);
       updateLobby();
+    } catch (error) {
+      console.error("Failed to join game:", error);
     }
   });
 
-  socket.on("makeMove", ({ gameId, index }) => {
+  socket.on("makeMove", async ({ gameId, index }) => {
     const game = games[gameId];
     if (
       !game ||
@@ -80,41 +124,99 @@ export function registerGameHandlers(io, socket, games) {
     const player = game.players.find((p) => p.playerId === playerId);
     game.board[index] = player.symbol;
 
-    if (checkWin(game.board)) {
-      game.state = "game_over_win";
-      game.winner = playerId;
-      return io.to(gameId).emit("gameOver", game);
-    }
+    const winnerSymbol = checkWin(game.board);
+    const isDraw = !winnerSymbol && checkDraw(game.board);
 
-    if (checkDraw(game.board)) {
-      game.state = "game_over_draw";
-      return io.to(gameId).emit("gameOver", game);
-    }
+    if (winnerSymbol || isDraw) {
+      const winner = game.players.find((p) => p.symbol === winnerSymbol);
 
-    game.currentPlayer = game.players.find(
-      (p) => p.playerId !== playerId,
-    ).playerId;
-    io.to(gameId).emit("updateBoard", game);
+      try {
+        await prisma.game.update({
+          where: { id: gameId },
+          data: {
+            state: winner ? "game_over_win" : "game_over_draw",
+            winnerId: winner?.playerId, // Use optional chaining for safety
+          },
+        });
+      } catch (error) {
+        console.error("Failed to update final game state:", error);
+      }
+
+      game.state = winner ? "game_over_win" : "game_over_draw";
+      game.winner = winner?.playerId;
+      io.to(gameId).emit("gameOver", game);
+
+      // Schedule the finished game to be removed from the active cache later
+      setTimeout(() => delete games[gameId], 60000);
+      return;
+    } else {
+      // --- If game is not over, continue as normal ---
+      game.currentPlayer = game.players.find(
+        (p) => p.playerId !== playerId,
+      ).playerId;
+      io.to(gameId).emit("updateBoard", game);
+    }
   });
 
-  socket.on("playerReadyForRematch", (gameId) => {
-    const game = games[gameId];
-    if (!game) return;
+  socket.on("playerReadyForRematch", async ({ gameId }) => {
+    const finishedGame = games[gameId];
+    if (!finishedGame) return;
 
-    // Register this player's request
-    if (!game.rematchRequestedBy.includes(playerId)) {
-      game.rematchRequestedBy.push(playerId);
+    if (!finishedGame.rematchRequestedBy.includes(playerId)) {
+      finishedGame.rematchRequestedBy.push(playerId);
     }
 
-    // Check if both players are now ready
-    if (game.rematchRequestedBy.length === 2) {
-      // Both player's want rematch
-      resetGameForRematch(game);
+    if (finishedGame.rematchRequestedBy.length === 2) {
+      try {
+        const player1 = finishedGame.players[0];
+        const player2 = finishedGame.players[1];
 
-      io.to(gameId).emit("gameStart", game);
+        // Create the new game in the database, swapping the players
+        const newDbGame = await prisma.game.create({
+          data: {
+            state: "in_progress",
+            player1Id: player2.playerId,
+            player2Id: player1.playerId,
+          },
+        });
+        const newGameId = newDbGame.id;
+
+        // Create a new in-memory cache object for the new game
+        games[newGameId] = {
+          id: newGameId,
+          // Swap the players array and symbols
+          players: [
+            {
+              ...player2,
+              symbol: "X",
+              socketId: io.sockets.sockets.get(player2.socketId)?.id,
+            },
+            {
+              ...player1,
+              symbol: "O",
+              socketId: io.sockets.sockets.get(player1.socketId)?.id,
+            },
+          ],
+          board: Array(9).fill(null),
+          currentPlayer: player2.playerId,
+          state: "in_progress",
+          rematchRequestedBy: [],
+        };
+
+        // Join both players to the new game room
+        io.sockets.sockets.get(player1.socketId)?.join(newGameId);
+        io.sockets.sockets.get(player2.socketId)?.join(newGameId);
+
+        io.to(newGameId).emit("gameStart", games[newGameId]);
+
+        delete games[gameId];
+      } catch (error) {
+        console.error("Failed to create rematch game:", error);
+      }
     } else {
-      // Only one player is ready. Notify the opponent.
-      const opponent = game.players.find((p) => p.playerId !== playerId);
+      const opponent = finishedGame.players.find(
+        (p) => p.playerId !== playerId,
+      );
       if (opponent?.socketId) {
         io.to(opponent.socketId).emit("opponentWantsRematch");
       }

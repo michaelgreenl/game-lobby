@@ -19,8 +19,9 @@
       <p v-if="game.state === 'game_over_draw'">It's a draw!</p>
       <p v-if="rematchRequested">Waiting for opponent...</p>
       <p v-if="opponentWantsRematch">Opponent wants a rematch!</p>
+      <p v-if="opponentDisconnected">Opponent is disconnected</p>
       <button @click="emit('create')">New Game</button>
-      <button :class="{ disabled: opponentDisconnected }" @click="emit('rematch', game.id)">Rematch</button>
+      <button :class="{ disabled: opponentDisconnected }" @click="emit('rematch', { gameId: game.id })">Rematch</button>
     </div>
 
     <div class="board" :class="{
