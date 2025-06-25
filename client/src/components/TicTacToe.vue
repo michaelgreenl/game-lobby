@@ -21,14 +21,8 @@ const props = defineProps({
 const gameStore = useGameStore();
 
 const cellClicked = (index) => {
-  console.log(props.isMyTurn);
-  console.log(props.game.board[index]);
-  console.log('here');
-
   if (props.isMyTurn && props.game.board[index] === null) {
-    console.log('here1');
     gameStore.makeMove(index);
-    console.log(gameStore.game.board);
   }
 };
 </script>

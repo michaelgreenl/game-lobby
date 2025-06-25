@@ -26,7 +26,6 @@ export const useGameStore = defineStore('game', () => {
         });
 
         socket.on('updateBoard', (gameState) => {
-          console.log('here')
           game.value = gameState;
         });
 
