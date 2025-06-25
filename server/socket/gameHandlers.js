@@ -1,27 +1,9 @@
-import { checkWin, checkDraw } from "../game/tictactoe.js";
-import { prisma } from "../db.js";
-
-function resetGameForRematch(game) {
-  // Swap the starting player
-  const player1 = game.players[0];
-  const player2 = game.players[1];
-
-  if (game.currentPlayer === player1.playerId) {
-    game.currentPlayer = player2.playerId;
-  } else {
-    game.currentPlayer = player1.playerId;
-  }
-
-  // Reset game state
-  game.board = Array(9).fill(null);
-  game.winner = null;
-  game.state = "in_progress";
-  game.rematchRequestedBy = [];
-}
+import { checkWin, checkDraw, resetGameForRematch } from "../game/tictactoe.js";
+import { prisma } from "../db/index.js";
 
 // This function will be called once per connecting user.
 export function registerGameHandlers(io, socket, games) {
-  const { playerId } = socket.handshake.auth;
+  const playerId = socket.playerId;
 
   // Update open games in lobby
   const updateLobby = () => {
@@ -36,16 +18,10 @@ export function registerGameHandlers(io, socket, games) {
 
   socket.on("createGame", async () => {
     try {
-      const user = await prisma.user.upsert({
-        where: { id: playerId },
-        update: {},
-        create: { id: playerId },
-      });
-
       const dbGame = await prisma.game.create({
         data: {
           state: "waiting_for_player_2",
-          player1Id: user.id,
+          player1Id: playerId,
         },
       });
 
@@ -62,8 +38,8 @@ export function registerGameHandlers(io, socket, games) {
         rematchRequestedBy: [],
       };
 
-      socket.join(gameId);
       socket.emit("gameCreated", games[gameId]);
+      socket.join(gameId);
       updateLobby();
     } catch (error) {
       console.error("Failed to create game:", error);
@@ -81,16 +57,10 @@ export function registerGameHandlers(io, socket, games) {
     }
 
     try {
-      const user = await prisma.user.upsert({
-        where: { id: playerId },
-        update: {},
-        create: { id: playerId },
-      });
-
       await prisma.game.update({
         where: { id: gameId },
         data: {
-          player2Id: user.id,
+          player2Id: playerId,
           state: "in_progress",
         },
       });
@@ -221,5 +191,72 @@ export function registerGameHandlers(io, socket, games) {
         io.to(opponent.socketId).emit("opponentWantsRematch");
       }
     }
+  });
+
+  socket.on("fetchGameState", async (gameId) => {
+    if (!gameId) {
+      return console.warn(`Player ${playerId} sent an empty gameId.`);
+    }
+
+    // Check if the game is already in our fast in-memory cache
+    let game = games[gameId];
+
+    // If it's NOT in the cache, try to fetch it from the database
+    if (!game) {
+      console.log(`Game ${gameId} not in cache. Checking database...`);
+      try {
+        const dbGame = await prisma.game.findUnique({
+          where: { id: gameId },
+          include: { player1: true, player2: true }, // Include player data
+        });
+
+        // If found in DB, "rehydrate" the in-memory game object
+        if (
+          dbGame &&
+          (dbGame.player1Id === playerId || dbGame.player2Id === playerId)
+        ) {
+          games[gameId] = {
+            id: dbGame.id,
+            players: [
+              { playerId: dbGame.player1.id, symbol: "X", isOnline: false }, // Assume offline until they reconnect
+              { playerId: dbGame.player2?.id, symbol: "O", isOnline: false },
+            ],
+            board: Array(9).fill(null),
+            currentPlayer: dbGame.player1Id,
+            state: dbGame.state,
+            rematchRequestedBy: [],
+          };
+          game = games[gameId]; // Assign it to our 'game' variable
+          console.log(`Rehydrated game ${gameId} from database.`);
+        }
+      } catch (error) {
+        console.error("Error fetching game from DB:", error);
+        return;
+      }
+    }
+
+    // --- The rest of your logic can now proceed ---
+
+    // Security and Sanity Check: Does the game even exist?
+    if (!game) {
+      console.warn(`Player ${playerId} requested non-existent game: ${gameId}`);
+      return;
+    }
+
+    const isPlayerInGame = game.players.some((p) => p.playerId === playerId);
+    if (!isPlayerInGame) {
+      console.warn(
+        `Player ${playerId} attempted to fetch state for a game they are not in: ${gameId}`,
+      );
+      return;
+    }
+
+    console.log(
+      `Player ${playerId} successfully fetched state for game ${gameId}`,
+    );
+
+    // We send the 'gameReconnected' event to trigger the full client-side update logic
+    // This will also handle updating the player's 'isOnline' status via the main connect handler
+    socket.emit("gameReconnected", game);
   });
 }
