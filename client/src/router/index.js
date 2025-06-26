@@ -25,10 +25,10 @@ router.beforeEach(async (to, from, next) => {
     const requiresAuth = to.meta.requiresAuth;
 
     if (requiresAuth && !auth.isAuthenticated) {
-        next('/login'); // Redirect to login page
+        next('/login'); 
     }
     else if ((to.name === 'Login' || to.name === 'Register') && auth.isAuthenticated) {
-        next('/'); // Redirect them to the home page
+        next('/'); 
     }
     else if (to.name === 'Lobby' && auth.isAuthenticated) {
         // Check if user has an active game before showing lobby
@@ -46,7 +46,6 @@ router.beforeEach(async (to, from, next) => {
         // Check if user is already in a different game
         if (gameStore.game && gameStore.game.id && gameStore.game.id !== targetGameId) {
             // User is in a different game, redirect them to their actual game
-            console.log(`User trying to access game ${targetGameId} but is in game ${gameStore.game.id}, redirecting`);
             next({ name: 'Game', params: { id: gameStore.game.id } });
             return;
         }
@@ -58,7 +57,6 @@ router.beforeEach(async (to, from, next) => {
         
         if (activeGame) {
             // User has an active game that's different from the target, redirect to their game
-            console.log(`User trying to access game ${targetGameId} but has active game ${activeGame.id}, redirecting`);
             next({ name: 'Game', params: { id: activeGame.id } });
             return;
         }

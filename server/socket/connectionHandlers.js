@@ -3,7 +3,6 @@ import { prisma } from "../db/index.js";
 
 export function handleDisconnect(io, socket, games, disconnectTimeouts) {
   const playerId = socket.playerId;
-  console.log(`Player ${playerId} disconnected.`);
 
   for (const gameId in games) {
     const game = games[gameId];
@@ -12,67 +11,70 @@ export function handleDisconnect(io, socket, games, disconnectTimeouts) {
     if (player) {
       player.isOnline = false;
       player.socketId = null;
-      console.log(`Player ${playerId} marked as offline in game ${gameId}`);
 
       const opponent = game.players.find((p) => p.playerId !== playerId);
-      
+
       // Handle different game states
       if (game.state === "waiting_for_player_2") {
         // Game hasn't started yet - cancel it immediately
-        console.log(`Cancelling waiting game ${gameId} due to disconnect`);
         try {
           prisma.game.update({
             where: { id: gameId },
-            data: { state: "cancelled" }
+            data: { state: "cancelled" },
           });
         } catch (error) {
           console.error("Failed to update game state to cancelled:", error);
         }
-        
+
         // Notify the remaining player
         if (opponent?.socketId) {
           io.to(opponent.socketId).emit("gameCancelled", {
-            message: "Game cancelled - opponent disconnected before game started"
+            message:
+              "Game cancelled - opponent disconnected before game started",
           });
         }
-        
+
         // Remove from active games
         delete games[gameId];
-        
       } else if (game.state === "in_progress") {
         // Game is in progress - notify opponent and start timer
         if (opponent?.socketId) {
-          console.log(`Notifying opponent ${opponent.playerId} about disconnect`);
           io.to(opponent.socketId).emit("playerDisconnected", {
-            message: "Opponent disconnected. You will win in 30 seconds if they don't reconnect.",
-            gameId: gameId
+            message:
+              "Opponent disconnected. You will win in 30 seconds if they don't reconnect.",
+            gameId: gameId,
           });
         }
-        
+
         // Set timer to end game after 30 seconds
         const timer = setTimeout(async () => {
           const currentGame = games[gameId];
-          if (currentGame && currentGame.players.find((p) => p.playerId === playerId)?.isOnline === false) {
-            console.log(`Ending game ${gameId} due to timeout - ${opponent.playerId} wins`);
-            
+          if (
+            currentGame &&
+            currentGame.players.find((p) => p.playerId === playerId)
+              ?.isOnline === false
+          ) {
             try {
               await prisma.game.update({
                 where: { id: gameId },
                 data: {
                   state: "game_over_win",
-                  winnerId: opponent.playerId
-                }
+                  winnerId: opponent.playerId,
+                },
               });
             } catch (error) {
-              console.error("Failed to update game state to game_over_win:", error);
+              console.error(
+                "Failed to update game state to game_over_win:",
+                error,
+              );
             }
-            
+
             currentGame.state = "game_over_win";
             currentGame.winner = opponent.playerId;
-            
+
             // Notify all players in the game
             io.to(gameId).emit("gameOver", currentGame);
-            
+
             // Clean up
             delete games[gameId];
             disconnectTimeouts.delete(playerId);
@@ -80,13 +82,11 @@ export function handleDisconnect(io, socket, games, disconnectTimeouts) {
         }, 30000);
 
         disconnectTimeouts.set(playerId, timer);
-        
-      } else if (game.state?.includes('game_over')) {
+      } else if (game.state?.includes("game_over")) {
         // Game is already finished - just mark player as offline
-        console.log(`Player ${playerId} disconnected from finished game ${gameId}`);
         if (opponent?.socketId) {
           io.to(opponent.socketId).emit("playerDisconnected", {
-            message: "Opponent disconnected from finished game"
+            message: "Opponent disconnected from finished game",
           });
         }
       }
@@ -106,7 +106,6 @@ export function handleConnection(io, socket, games, disconnectTimeouts) {
     const playerInGame = game.players.find((p) => p.playerId === playerId);
 
     if (playerInGame && !playerInGame.isOnline) {
-      console.log(`Player ${playerId} is reconnecting to game ${gameId}`);
       reconnected = true;
 
       // Clear any disconnect timeout
@@ -119,7 +118,7 @@ export function handleConnection(io, socket, games, disconnectTimeouts) {
       playerInGame.isOnline = true;
       playerInGame.socketId = socket.id;
       socket.join(gameId);
-      
+
       // Notify all players in the game that someone reconnected
       io.to(gameId).emit("gameReconnected", game);
       break;
@@ -137,9 +136,7 @@ export function handleConnection(io, socket, games, disconnectTimeouts) {
     );
   }
 
-  // --- REGISTER ALL OTHER EVENT HANDLERS ---
   registerGameHandlers(io, socket, games);
-  // registerChatHandlers(io, socket, games); // For the future
 
   // Register the disconnect handler for this specific socket
   socket.on("disconnect", () =>

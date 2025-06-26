@@ -1,7 +1,6 @@
 import { checkWin, checkDraw, resetGameForRematch } from "../game/tictactoe.js";
 import { prisma } from "../db/index.js";
 
-// This function will be called once per connecting user.
 export function registerGameHandlers(io, socket, games) {
   const playerId = socket.playerId;
 
@@ -22,7 +21,6 @@ export function registerGameHandlers(io, socket, games) {
         data: {
           state: "waiting_for_player_2",
           player1Id: playerId,
-          board: Array(9).fill(null), // Save initial board state
         },
       });
 
@@ -82,42 +80,8 @@ export function registerGameHandlers(io, socket, games) {
     }
   });
 
-  socket.on("cancelGame", async (gameId) => {
-    const game = games[gameId];
-    if (!game || game.state !== "waiting_for_player_2") {
-      return;
-    }
-
-    // Only the creator can cancel the game
-    if (game.players[0].playerId !== playerId) {
-      return;
-    }
-
-    try {
-      await prisma.game.update({
-        where: { id: gameId },
-        data: { state: "cancelled" },
-      });
-
-      // Notify any waiting players
-      io.to(gameId).emit("gameCancelled", {
-        message: "Game cancelled by creator"
-      });
-
-      // Remove from active games
-      delete games[gameId];
-      updateLobby();
-    } catch (error) {
-      console.error("Failed to cancel game:", error);
-    }
-  });
-
   socket.on("makeMove", async ({ gameId, index }) => {
     const game = games[gameId];
-    console.log(games);
-    console.log(gameId);
-    console.log(game);
-    console.log(index);
     if (
       !game ||
       game.currentPlayer !== playerId ||
@@ -128,16 +92,6 @@ export function registerGameHandlers(io, socket, games) {
 
     const player = game.players.find((p) => p.playerId === playerId);
     game.board[index] = player.symbol;
-
-    // Save the updated board state to the database
-    try {
-      await prisma.game.update({
-        where: { id: gameId },
-        data: { board: game.board },
-      });
-    } catch (error) {
-      console.error("Failed to save board state:", error);
-    }
 
     const winnerSymbol = checkWin(game.board);
     const isDraw = !winnerSymbol && checkDraw(game.board);
@@ -150,7 +104,7 @@ export function registerGameHandlers(io, socket, games) {
           where: { id: gameId },
           data: {
             state: winner ? "game_over_win" : "game_over_draw",
-            winnerId: winner?.playerId, // Use optional chaining for safety
+            winnerId: winner?.playerId,
           },
         });
       } catch (error) {
@@ -165,7 +119,7 @@ export function registerGameHandlers(io, socket, games) {
       setTimeout(() => delete games[gameId], 60000);
       return;
     } else {
-      // --- If game is not over, continue as normal ---
+      // Game is not over
       game.currentPlayer = game.players.find(
         (p) => p.playerId !== playerId,
       ).playerId;
@@ -176,13 +130,6 @@ export function registerGameHandlers(io, socket, games) {
   socket.on("playerReadyForRematch", async ({ gameId }) => {
     const finishedGame = games[gameId];
     if (!finishedGame) return;
-
-    // Check if opponent is online
-    const opponent = finishedGame.players.find((p) => p.playerId !== playerId);
-    if (!opponent?.isOnline) {
-      socket.emit("rematchError", { message: "Opponent is not online. Cannot start rematch." });
-      return;
-    }
 
     if (!finishedGame.rematchRequestedBy.includes(playerId)) {
       finishedGame.rematchRequestedBy.push(playerId);
@@ -199,12 +146,11 @@ export function registerGameHandlers(io, socket, games) {
             state: "in_progress",
             player1Id: player2.playerId,
             player2Id: player1.playerId,
-            board: Array(9).fill(null), // Save initial board state for rematch
           },
         });
         const newGameId = newDbGame.id;
 
-        // Create a new in-memory cache object for the new game
+        // Create a new cache object for the new game
         games[newGameId] = {
           id: newGameId,
           // Swap the players array and symbols
@@ -251,12 +197,11 @@ export function registerGameHandlers(io, socket, games) {
       return console.warn(`Player ${playerId} sent an empty gameId.`);
     }
 
-    // Check if the game is already in our fast in-memory cache
+    // Check if the game is already in cache
     let game = games[gameId];
 
-    // If it's NOT in the cache, try to fetch it from the database
+    // If it's not in the cache, try to fetch it from the database
     if (!game) {
-      console.log(`Game ${gameId} not in cache. Checking database...`);
       try {
         const dbGame = await prisma.game.findUnique({
           where: { id: gameId },
@@ -271,24 +216,15 @@ export function registerGameHandlers(io, socket, games) {
           games[gameId] = {
             id: dbGame.id,
             players: [
-              { playerId: dbGame.player1.id, symbol: "X", isOnline: false }, // Assume offline until they reconnect
+              { playerId: dbGame.player1.id, symbol: "X", isOnline: false },
               { playerId: dbGame.player2?.id, symbol: "O", isOnline: false },
             ],
-            board: dbGame.board || Array(9).fill(null), // Load actual board state from DB
+            board: Array(9).fill(null),
             currentPlayer: dbGame.player1Id,
             state: dbGame.state,
             rematchRequestedBy: [],
           };
-          game = games[gameId]; // Assign it to our 'game' variable
-          console.log(`Rehydrated game ${gameId} from database.`);
-        } else if (dbGame) {
-          // Game exists but user is not part of it
-          console.warn(`Player ${playerId} attempted to access game ${gameId} they are not part of`);
-          socket.emit("gameAccessDenied", {
-            message: "You are not part of this game",
-            gameId: gameId
-          });
-          return;
+          game = games[gameId];
         }
       } catch (error) {
         console.error("Error fetching game from DB:", error);
@@ -296,15 +232,8 @@ export function registerGameHandlers(io, socket, games) {
       }
     }
 
-    // --- The rest of your logic can now proceed ---
-
-    // Security and Sanity Check: Does the game even exist?
     if (!game) {
       console.warn(`Player ${playerId} requested non-existent game: ${gameId}`);
-      socket.emit("gameAccessDenied", {
-        message: "Game not found",
-        gameId: gameId
-      });
       return;
     }
 
@@ -313,53 +242,9 @@ export function registerGameHandlers(io, socket, games) {
       console.warn(
         `Player ${playerId} attempted to fetch state for a game they are not in: ${gameId}`,
       );
-      socket.emit("gameAccessDenied", {
-        message: "You are not part of this game",
-        gameId: gameId
-      });
       return;
     }
 
-    console.log(
-      `Player ${playerId} successfully fetched state for game ${gameId}`,
-    );
-
-    // We send the 'gameReconnected' event to trigger the full client-side update logic
-    // This will also handle updating the player's 'isOnline' status via the main connect handler
     socket.emit("gameReconnected", game);
-  });
-
-  socket.on("checkActiveGame", async () => {
-    try {
-      // Check if user has any active games in the database
-      const activeGame = await prisma.game.findFirst({
-        where: {
-          OR: [
-            { player1Id: playerId },
-            { player2Id: playerId }
-          ],
-          AND: {
-            state: {
-              in: ["waiting_for_player_2", "in_progress"]
-            }
-          }
-        },
-        include: { player1: true, player2: true }
-      });
-
-      if (activeGame) {
-        // User has an active game, send it to them
-        socket.emit("activeGameFound", {
-          gameId: activeGame.id,
-          state: activeGame.state
-        });
-      } else {
-        // No active game found
-        socket.emit("noActiveGame");
-      }
-    } catch (error) {
-      console.error("Error checking for active game:", error);
-      socket.emit("noActiveGame");
-    }
   });
 }

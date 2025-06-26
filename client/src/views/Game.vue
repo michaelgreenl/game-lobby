@@ -3,8 +3,8 @@
     <GameBoard v-if="gameStore.game.id" :game="gameStore.game" :playerId="authStore.user?.id"
       :opponentDisconnected="gameStore.opponentDisconnected" :rematchRequested="gameStore.rematchRequested"
       :opponentWantsRematch="gameStore.opponentWantsRematch" :disconnectCountdown="gameStore.disconnectCountdown"
-      @rematch="gameStore.playAgain(gameStore.game.id)"
-      @exitToLobby="exitToLobby" @move="makeMove" @cancelGame="cancelGame" @createNewGame="createNewGame" />
+      @rematch="gameStore.playAgain(gameStore.game.id)" @exitToLobby="exitToLobby" @move="makeMove"
+      @cancelGame="cancelGame" @createNewGame="createNewGame" />
     <div v-else>
       <p>Loading game...</p>
     </div>
@@ -33,12 +33,11 @@ onMounted(() => {
     // Ask the server for the latest game state.
     socket.emit('fetchGameState', gameIdFromUrl);
   }
-  
+
   // Check if user is actually part of this game
   if (gameStore.game.id && gameStore.game.players) {
     const isUserInGame = gameStore.game.players.some(p => p.playerId === authStore.user?.id);
     if (!isUserInGame) {
-      console.log('User not in this game, checking for their active game');
       // User is not in this game, check if they have an active game elsewhere
       const hasActiveGame = gameStore.checkForActiveGame();
       if (!hasActiveGame) {

@@ -31,7 +31,7 @@ const io = new Server(server, {
   },
 });
 
-// --- Socket.IO Authentication Middleware ---
+// Socket.IO Authentication Middleware
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) {
@@ -42,6 +42,7 @@ io.use((socket, next) => {
     if (err) {
       return next(new Error("Authentication error: Invalid token"));
     }
+
     // Attach the user ID to the socket object for use in handlers
     socket.playerId = decoded.userId;
     next();
