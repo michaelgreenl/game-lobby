@@ -1,7 +1,17 @@
 <template>
-  <div class="game-board">
-    <div v-if="props.game.state === 'waiting_for_player_2'" class="inactive-game">
-      <p>Waiting for another player to join...</p>
+  <div class="game-board-container">
+    <!-- Disconnect message - show prominently at the top -->
+    <div v-if="props.opponentDisconnected" class="disconnect-message">
+      <p>⚠️ Opponent is disconnected</p>
+      <p v-if="props.game.state === 'in_progress'" class="disconnect-timer">
+        You will win in {{ props.disconnectCountdown }} seconds if they don't reconnect
+      </p>
+    </div>
+
+    <div v-if="props.game.state === 'waiting_for_player_2'" class="waiting-game">
+      <h2>Waiting for another player to join...</h2>
+      <p>Share this game with a friend to start playing!</p>
+      <button @click="emit('cancelGame')" class="cancel-button">Cancel Game</button>
     </div>
 
     <div v-else-if="props.game.state === 'in_progress'" class="active-game">
@@ -10,25 +20,29 @@
       <p v-if="isMyTurn">It's your turn!</p>
       <p v-else>Waiting for opponent...</p>
     </div>
-
-    <div v-else-if="props.game.state.includes('game_over')">
+    <div v-else-if="props.game.state?.includes('game_over')">
       <h2>Game Over!</h2>
-      <p v-if="game.state === 'game_over_win'">
-        Winner is: {{ game.winner === props.playerId ? 'You!:)' : 'Opponent:`(' }}
+      <p v-if="props.game.state === 'game_over_win'">
+        Winner is: {{ props.game.winner === props.playerId ? 'You!:)' : 'Opponent:`(' }}
       </p>
-      <p v-if="game.state === 'game_over_draw'">It's a draw!</p>
-      <p v-if="rematchRequested">Waiting for opponent...</p>
-      <p v-if="opponentWantsRematch">Opponent wants a rematch!</p>
-      <p v-if="opponentDisconnected">Opponent is disconnected</p>
-      <button @click="emit('create')">New Game</button>
-      <button :class="{ disabled: opponentDisconnected }" @click="emit('rematch', { gameId: game.id })">Rematch</button>
+      <p v-if="props.game.state === 'game_over_draw'">It's a draw!</p>
+      <p v-if="props.rematchRequested">Waiting for opponent...</p>
+      <p v-if="props.opponentWantsRematch">Opponent wants a rematch!</p>
+      <button @click="emit('createNewGame')">New Game</button>
+      <button 
+        :class="{ disabled: props.opponentDisconnected }" 
+        :disabled="props.opponentDisconnected"
+        @click="emit('rematch')"
+      >
+        {{ props.opponentDisconnected ? 'Rematch (Opponent Disconnected)' : 'Rematch' }}
+      </button>
     </div>
 
     <div class="board" :class="{
       disabled: !isMyTurn || props.opponentDisconnected ||
         props.game.state != 'in_progress'
     }">
-      <div class="cell" v-for="(cell, index) in game.board" :key="index" @click="cellClicked(index)">
+      <div class="cell" v-for="(cell, index) in props.game.board" :key="index" @click="cellClicked(index)">
         {{ cell }}
       </div>
     </div>
@@ -44,14 +58,15 @@ const props = defineProps({
   opponentDisconnected: Boolean,
   rematchRequested: Boolean,
   opponentWantsRematch: Boolean,
+  disconnectCountdown: Number,
 });
 
-const emit = defineEmits(['move', 'create', 'rematch']);
+const emit = defineEmits(['exitToLobby', 'rematch', 'move', 'cancelGame', 'createNewGame']);
 
 const isMyTurn = computed(() => props.game.currentPlayer === props.playerId);
 const mySymbol = computed(() => {
-  const me = props.game.players.find(p => p.playerId === props.playerId);
-  return me ? me.symbol : '?'; // Return our symbol, or '?' if not found
+  const me = props.game.players?.find(p => p.playerId === props.playerId);
+  return me ? me.symbol : '?';
 });
 
 const cellClicked = (index) => {
@@ -82,5 +97,56 @@ const cellClicked = (index) => {
 .disabled {
   pointer-events: none;
   opacity: 0.6;
+}
+
+.disconnect-message {
+  background-color: #ffebee;
+  border: 2px solid #f44336;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.disconnect-message p {
+  margin: 0;
+  color: #d32f2f;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.disconnect-timer {
+  font-size: 0.8em;
+  color: #666;
+}
+
+.waiting-game {
+  text-align: center;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.waiting-game h2 {
+  margin-bottom: 10px;
+}
+
+.waiting-game p {
+  margin: 0;
+}
+
+.cancel-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.cancel-button:hover {
+  background-color: #d32f2f;
 }
 </style>
