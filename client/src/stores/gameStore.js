@@ -15,6 +15,9 @@ export const useGameStore = defineStore('game', () => {
     const authStore = useAuthStore();
 
     function initializeSocketListeners() {
+        // Remove previous listeners to avoid duplicate handlers
+        socket.off('gameStart');
+
         socket.on('updateGameList', (gameList) => { games.value = gameList; });
 
         socket.on('gameCreated', (gameState) => {
@@ -24,6 +27,7 @@ export const useGameStore = defineStore('game', () => {
         });
 
         socket.on('gameStart', (gameState) => {
+          console.log('[Socket] Received gameStart event:', gameState);
           game.value = gameState;
           rematchRequested.value = false;
           opponentWantsRematch.value = false;
@@ -53,7 +57,6 @@ export const useGameStore = defineStore('game', () => {
         socket.on('gameOver', (gameState) => {
           game.value = gameState;
           stopDisconnectCountdown();
-          // Don't reset opponentDisconnected here - opponent might still be disconnected
           rematchRequested.value = false;
           opponentWantsRematch.value = false;
         });
@@ -69,6 +72,16 @@ export const useGameStore = defineStore('game', () => {
           opponentWantsRematch.value = false;
           alert(data.message);
           router.push('/lobby');
+        });
+
+        socket.on('activeGameResponse', (gameState) => {
+          if (gameState && gameState.id) {
+            game.value = gameState;
+            router.push({ name: 'Game', params: { id: gameState.id } });
+          } else {
+            // No active game found, let the lobby know it's safe to show
+            window.dispatchEvent(new CustomEvent('noActiveGameFound'));
+          }
         });
     }
 
@@ -108,20 +121,29 @@ export const useGameStore = defineStore('game', () => {
       );
 
       if (activeGame) {
-        // User has an active game, redirect to it
+        // User has an active game, redirect to it immediately
         router.push({ name: 'Game', params: { id: activeGame.id } });
         return true;
       }
 
       // If no active game found locally, check if user is currently in a game
       if (game.value && game.value.id) {
-        // User is already in a game, redirect to it
+        // User is already in a game, redirect to it immediately
         router.push({ name: 'Game', params: { id: game.value.id } });
         return true;
       }
 
       // Check with server for any active games
       socket.emit('checkActiveGame');
+
+      // Set a timeout to handle cases where server doesn't respond
+      setTimeout(() => {
+        // If we still don't have a game after 3 seconds, assume no active game
+        if (!game.value || !game.value.id) {
+          // Emit an event to let the lobby know it's safe to show
+          window.dispatchEvent(new CustomEvent('noActiveGameFound'));
+        }
+      }, 3000);
 
       return false;
     }

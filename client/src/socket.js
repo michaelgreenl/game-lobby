@@ -6,5 +6,11 @@ export const socket = io(URL, {
   auth: {
     token: localStorage.getItem('token'),
   },
-  autoConnect: false,
+  autoConnect: false,  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  forceNew: false,
+  transports: ['websocket', 'polling']
 });

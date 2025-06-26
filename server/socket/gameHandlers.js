@@ -1,7 +1,7 @@
 import { checkWin, checkDraw, resetGameForRematch } from "../game/tictactoe.js";
 import { prisma } from "../db/index.js";
 
-export function registerGameHandlers(io, socket, games) {
+export function registerGameHandlers(io, socket, games, userSockets) {
   const playerId = socket.playerId;
 
   // Update open games in lobby
@@ -153,17 +153,16 @@ export function registerGameHandlers(io, socket, games) {
         // Create a new cache object for the new game
         games[newGameId] = {
           id: newGameId,
-          // Swap the players array and symbols
           players: [
             {
               ...player2,
               symbol: "X",
-              socketId: io.sockets.sockets.get(player2.socketId)?.id,
+              socketIds: userSockets.get(player2.playerId) ? new Set(Array.from(userSockets.get(player2.playerId))) : new Set(),
             },
             {
               ...player1,
               symbol: "O",
-              socketId: io.sockets.sockets.get(player1.socketId)?.id,
+              socketIds: userSockets.get(player1.playerId) ? new Set(Array.from(userSockets.get(player1.playerId))) : new Set(),
             },
           ],
           board: Array(9).fill(null),
@@ -172,9 +171,27 @@ export function registerGameHandlers(io, socket, games) {
           rematchRequestedBy: [],
         };
 
-        // Join both players to the new game room
-        io.sockets.sockets.get(player1.socketId)?.join(newGameId);
-        io.sockets.sockets.get(player2.socketId)?.join(newGameId);
+        // Helper to join all sockets to a room and emit event
+        function joinAndNotifyAllSockets(player, newGameId, gameData) {
+          const globalSet = userSockets.get(player.playerId);
+          if (globalSet && globalSet instanceof Set) {
+            for (const sockId of globalSet) {
+              const sock = io.sockets.sockets.get(sockId);
+              if (sock) {
+                for (const room of sock.rooms) {
+                  if (room !== sock.id && room !== newGameId) {
+                    sock.leave(room);
+                  }
+                }
+                sock.join(newGameId);
+                sock.emit("gameStart", gameData);
+              }
+            }
+          }
+        }
+
+        joinAndNotifyAllSockets(player1, newGameId, games[newGameId]);
+        joinAndNotifyAllSockets(player2, newGameId, games[newGameId]);
 
         io.to(newGameId).emit("gameStart", games[newGameId]);
 
@@ -186,8 +203,11 @@ export function registerGameHandlers(io, socket, games) {
       const opponent = finishedGame.players.find(
         (p) => p.playerId !== playerId,
       );
-      if (opponent?.socketId) {
-        io.to(opponent.socketId).emit("opponentWantsRematch");
+      const globalSet = userSockets.get(opponent.playerId);
+      if (globalSet && globalSet instanceof Set) {
+        for (const sockId of globalSet) {
+          io.to(sockId).emit("opponentWantsRematch");
+        }
       }
     }
   });
@@ -197,18 +217,14 @@ export function registerGameHandlers(io, socket, games) {
       return console.warn(`Player ${playerId} sent an empty gameId.`);
     }
 
-    // Check if the game is already in cache
     let game = games[gameId];
 
-    // If it's not in the cache, try to fetch it from the database
     if (!game) {
       try {
         const dbGame = await prisma.game.findUnique({
           where: { id: gameId },
-          include: { player1: true, player2: true }, // Include player data
+          include: { player1: true, player2: true },
         });
-
-        // If found in DB, "rehydrate" the in-memory game object
         if (
           dbGame &&
           (dbGame.player1Id === playerId || dbGame.player2Id === playerId)
@@ -232,19 +248,81 @@ export function registerGameHandlers(io, socket, games) {
       }
     }
 
-    if (!game) {
-      console.warn(`Player ${playerId} requested non-existent game: ${gameId}`);
-      return;
+    const playerObj = game.players.find((p) => p.playerId === playerId);
+    const globalSet = userSockets.get(playerId);
+    if (playerObj && globalSet && globalSet instanceof Set) {
+      for (const sockId of globalSet) {
+        const sock = io.sockets.sockets.get(sockId);
+        if (sock) {
+          for (const room of sock.rooms) {
+            if (room !== sock.id && room !== gameId) {
+              sock.leave(room);
+            }
+          }
+          sock.join(gameId);
+          sock.emit("gameReconnected", game);
+        }
+      }
+    } else {
+      // Always join the requesting socket to the game room
+      socket.join(gameId);
+      socket.emit("gameReconnected", game);
     }
+  });
 
-    const isPlayerInGame = game.players.some((p) => p.playerId === playerId);
-    if (!isPlayerInGame) {
-      console.warn(
-        `Player ${playerId} attempted to fetch state for a game they are not in: ${gameId}`,
+  socket.on("checkActiveGame", async () => {
+    try {
+      // First check in-memory games
+      const activeGame = Object.values(games).find(game =>
+        game.players.some(p => p.playerId === playerId) &&
+        !game.state?.includes('game_over') &&
+        game.state !== 'cancelled'
       );
-      return;
-    }
 
-    socket.emit("gameReconnected", game);
+      if (activeGame) {
+        socket.emit("activeGameResponse", activeGame);
+        return;
+      }
+
+      // If not found in memory, check database
+      const dbGame = await prisma.game.findFirst({
+        where: {
+          OR: [
+            { player1Id: playerId },
+            { player2Id: playerId }
+          ],
+          AND: {
+            state: {
+              notIn: ['game_over_win', 'game_over_draw', 'cancelled']
+            }
+          }
+        },
+        include: { player1: true, player2: true },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (dbGame) {
+        // Rehydrate the game into memory
+        const rehydratedGame = {
+          id: dbGame.id,
+          players: [
+            { playerId: dbGame.player1.id, symbol: "X", isOnline: false },
+            ...(dbGame.player2 ? [{ playerId: dbGame.player2.id, symbol: "O", isOnline: false }] : [])
+          ],
+          board: Array(9).fill(null),
+          currentPlayer: dbGame.player1Id,
+          state: dbGame.state,
+          rematchRequestedBy: [],
+        };
+
+        games[dbGame.id] = rehydratedGame;
+        socket.emit("activeGameResponse", rehydratedGame);
+      } else {
+        socket.emit("activeGameResponse", null);
+      }
+    } catch (error) {
+      console.error("Error checking for active game:", error);
+      socket.emit("activeGameResponse", null);
+    }
   });
 }

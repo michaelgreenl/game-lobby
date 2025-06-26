@@ -1,5 +1,5 @@
 <template>
-  <div class="game-view-container">
+  <div class="game-view-container" :key="route.params.id">
     <GameBoard v-if="gameStore.game.id" :game="gameStore.game" :playerId="authStore.user?.id"
       :opponentDisconnected="gameStore.opponentDisconnected" :rematchRequested="gameStore.rematchRequested"
       :opponentWantsRematch="gameStore.opponentWantsRematch" :disconnectCountdown="gameStore.disconnectCountdown"
@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useGameStore } from '../stores/gameStore';
 import { useAuthStore } from '../stores/authStore';
@@ -45,6 +45,13 @@ onMounted(() => {
         router.push('/lobby');
       }
     }
+  }
+});
+
+// Watch for changes to the route param and fetch the new game state
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    socket.emit('fetchGameState', newId);
   }
 });
 
