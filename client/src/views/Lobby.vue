@@ -15,8 +15,19 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue';
 import { useGameStore } from '../stores/gameStore';
+import { useAuthStore } from '../stores/authStore';
+
 const gameStore = useGameStore();
+const authStore = useAuthStore();
+
+onMounted(() => {
+  // Check if user has an active game and redirect if they do
+  if (authStore.isAuthenticated) {
+    gameStore.checkForActiveGame();
+  }
+});
 </script>
 
 <script>
