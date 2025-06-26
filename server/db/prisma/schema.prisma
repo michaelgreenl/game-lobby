@@ -29,6 +29,7 @@ model User {
 model Game {
   id        String   @id @default(cuid())
   state     String   // e.g., 'in_progress', 'game_over_win'
+  board     Json?    // Store the game board as JSON array
   createdAt DateTime @default(now())
   
   // Relations
