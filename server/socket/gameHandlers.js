@@ -1,4 +1,4 @@
-import { checkWin, checkDraw, resetGameForRematch } from "../game/tictactoe.js";
+import { checkWin, checkDraw } from "../game/tictactoe.js";
 import { prisma } from "../db/index.js";
 
 export function registerGameHandlers(io, socket, games, userSockets) {
@@ -157,12 +157,16 @@ export function registerGameHandlers(io, socket, games, userSockets) {
             {
               ...player2,
               symbol: "X",
-              socketIds: userSockets.get(player2.playerId) ? new Set(Array.from(userSockets.get(player2.playerId))) : new Set(),
+              socketIds: userSockets.get(player2.playerId)
+                ? new Set(Array.from(userSockets.get(player2.playerId)))
+                : new Set(),
             },
             {
               ...player1,
               symbol: "O",
-              socketIds: userSockets.get(player1.playerId) ? new Set(Array.from(userSockets.get(player1.playerId))) : new Set(),
+              socketIds: userSockets.get(player1.playerId)
+                ? new Set(Array.from(userSockets.get(player1.playerId)))
+                : new Set(),
             },
           ],
           board: Array(9).fill(null),
@@ -273,10 +277,11 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   socket.on("checkActiveGame", async () => {
     try {
       // First check in-memory games
-      const activeGame = Object.values(games).find(game =>
-        game.players.some(p => p.playerId === playerId) &&
-        !game.state?.includes('game_over') &&
-        game.state !== 'cancelled'
+      const activeGame = Object.values(games).find(
+        (game) =>
+          game.players.some((p) => p.playerId === playerId) &&
+          !game.state?.includes("game_over") &&
+          game.state !== "cancelled",
       );
 
       if (activeGame) {
@@ -287,18 +292,15 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       // If not found in memory, check database
       const dbGame = await prisma.game.findFirst({
         where: {
-          OR: [
-            { player1Id: playerId },
-            { player2Id: playerId }
-          ],
+          OR: [{ player1Id: playerId }, { player2Id: playerId }],
           AND: {
             state: {
-              notIn: ['game_over_win', 'game_over_draw', 'cancelled']
-            }
-          }
+              notIn: ["game_over_win", "game_over_draw", "cancelled"],
+            },
+          },
         },
         include: { player1: true, player2: true },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       });
 
       if (dbGame) {
@@ -307,7 +309,9 @@ export function registerGameHandlers(io, socket, games, userSockets) {
           id: dbGame.id,
           players: [
             { playerId: dbGame.player1.id, symbol: "X", isOnline: false },
-            ...(dbGame.player2 ? [{ playerId: dbGame.player2.id, symbol: "O", isOnline: false }] : [])
+            ...(dbGame.player2
+              ? [{ playerId: dbGame.player2.id, symbol: "O", isOnline: false }]
+              : []),
           ],
           board: Array(9).fill(null),
           currentPlayer: dbGame.player1Id,
