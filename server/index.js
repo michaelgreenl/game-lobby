@@ -56,6 +56,30 @@ io.on("connection", (socket) => {
   handleConnection(io, socket, games, disconnectTimeouts);
 });
 
-server.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
-});
+let httpServerInstance = null;
+
+export function startServer(port = PORT) {
+  return new Promise((resolve) => {
+    httpServerInstance = server.listen(port, () => {
+      console.log(`Server is listening on port ${port}`);
+      resolve(httpServerInstance);
+    });
+  });
+}
+
+export function stopServer() {
+  return new Promise((resolve, reject) => {
+    if (httpServerInstance) {
+      httpServerInstance.close((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
