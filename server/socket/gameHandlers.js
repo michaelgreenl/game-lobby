@@ -16,6 +16,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   };
 
   socket.on("createGame", async () => {
+    console.log(`Player ${playerId} is creating a new game.`);
     try {
       const dbGame = await prisma.game.create({
         data: {
@@ -25,6 +26,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       });
 
       const gameId = dbGame.id;
+      console.log(`New game created with ID: ${gameId}`);
 
       games[gameId] = {
         id: gameId,
@@ -46,12 +48,14 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   });
 
   socket.on("joinGame", async (gameId) => {
+    console.log(`Player ${playerId} is attempting to join game: ${gameId}`);
     const game = games[gameId];
     if (
       !game ||
       game.state !== "waiting_for_player_2" ||
       game.players[0].playerId === playerId
     ) {
+      console.log(`Player ${playerId} failed to join game ${gameId}. Conditions not met.`);
       return;
     }
 
@@ -72,6 +76,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       });
       game.state = "in_progress";
 
+      console.log(`Player ${playerId} successfully joined game ${gameId}.`);
       socket.join(gameId);
       io.to(gameId).emit("gameStart", game);
       updateLobby();
@@ -81,12 +86,14 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   });
 
   socket.on("makeMove", async ({ gameId, index }) => {
+    console.log(`Player ${playerId} is making a move in game ${gameId} at index ${index}`);
     const game = games[gameId];
     if (
       !game ||
       game.currentPlayer !== playerId ||
       game.board[index] !== null
     ) {
+      console.log(`Invalid move by player ${playerId} in game ${gameId}.`);
       return;
     }
 

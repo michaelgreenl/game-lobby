@@ -5,14 +5,17 @@ import { prisma } from "../db/index.js";
 export const userSockets = new Map();
 
 export function handleDisconnect(io, socket, games, disconnectTimeouts) {
+  console.log(`Client disconnected: ${socket.id}`);
   const playerId = socket.playerId;
 
   // Remove this socket from the global userSockets map
   if (userSockets.has(playerId)) {
     const set = userSockets.get(playerId);
     set.delete(socket.id);
+    console.log(`Socket ${socket.id} removed from user ${playerId}. Sockets remaining: ${set.size}`);
     if (set.size === 0) {
       userSockets.delete(playerId);
+      console.log(`User ${playerId} has no more sockets connected.`);
     }
   }
 
@@ -103,6 +106,7 @@ export function handleDisconnect(io, socket, games, disconnectTimeouts) {
 }
 
 export function handleConnection(io, socket, games, disconnectTimeouts) {
+  console.log(`Handling connection for player ID: ${socket.playerId}`);
   const playerId = socket.playerId;
   let reconnected = false;
 

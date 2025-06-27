@@ -33,17 +33,21 @@ const io = new Server(server, {
 
 // Socket.IO Authentication Middleware
 io.use((socket, next) => {
+  console.log("Attempting to authenticate socket connection...");
   const token = socket.handshake.auth.token;
   if (!token) {
+    console.error("Authentication error: No token provided.");
     return next(new Error("Authentication error: No token provided"));
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
+      console.error("Authentication error: Invalid token.");
       return next(new Error("Authentication error: Invalid token"));
     }
 
     // Attach the user ID to the socket object for use in handlers
+    console.log(`Socket authenticated for user ID: ${decoded.userId}`);
     socket.playerId = decoded.userId;
     next();
   });
@@ -53,6 +57,7 @@ let games = {};
 const disconnectTimeouts = new Map();
 
 io.on("connection", (socket) => {
+  console.log(`New client connected: ${socket.id}`);
   handleConnection(io, socket, games, disconnectTimeouts);
 });
 
