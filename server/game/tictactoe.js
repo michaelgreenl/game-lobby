@@ -27,20 +27,3 @@ export const checkDraw = (board) => {
   return board.every((cell) => cell !== null);
 };
 
-export const resetGameForRematch = (game) => {
-  // Swap the starting player
-  const player1 = game.players[0];
-  const player2 = game.players[1];
-
-  if (game.currentPlayer === player1.playerId) {
-    game.currentPlayer = player2.playerId;
-  } else {
-    game.currentPlayer = player1.playerId;
-  }
-
-  // Reset game state
-  game.board = Array(9).fill(null);
-  game.winner = null;
-  game.state = "in_progress";
-  game.rematchRequestedBy = [];
-};

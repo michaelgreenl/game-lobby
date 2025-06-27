@@ -1,4 +1,4 @@
-import { checkWin, checkDraw, resetGameForRematch } from "../game/tictactoe.js";
+import { checkWin, checkDraw } from "../game/tictactoe.js";
 import { prisma } from "../db/index.js";
 
 export function registerGameHandlers(io, socket, games, userSockets) {
@@ -16,6 +16,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   };
 
   socket.on("createGame", async () => {
+    console.log(`Player ${playerId} is creating a new game.`);
     try {
       const dbGame = await prisma.game.create({
         data: {
@@ -25,6 +26,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       });
 
       const gameId = dbGame.id;
+      console.log(`New game created with ID: ${gameId}`);
 
       games[gameId] = {
         id: gameId,
@@ -46,12 +48,14 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   });
 
   socket.on("joinGame", async (gameId) => {
+    console.log(`Player ${playerId} is attempting to join game: ${gameId}`);
     const game = games[gameId];
     if (
       !game ||
       game.state !== "waiting_for_player_2" ||
       game.players[0].playerId === playerId
     ) {
+      console.log(`Player ${playerId} failed to join game ${gameId}. Conditions not met.`);
       return;
     }
 
@@ -72,6 +76,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       });
       game.state = "in_progress";
 
+      console.log(`Player ${playerId} successfully joined game ${gameId}.`);
       socket.join(gameId);
       io.to(gameId).emit("gameStart", game);
       updateLobby();
@@ -81,12 +86,14 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   });
 
   socket.on("makeMove", async ({ gameId, index }) => {
+    console.log(`Player ${playerId} is making a move in game ${gameId} at index ${index}`);
     const game = games[gameId];
     if (
       !game ||
       game.currentPlayer !== playerId ||
       game.board[index] !== null
     ) {
+      console.log(`Invalid move by player ${playerId} in game ${gameId}.`);
       return;
     }
 
@@ -157,12 +164,16 @@ export function registerGameHandlers(io, socket, games, userSockets) {
             {
               ...player2,
               symbol: "X",
-              socketIds: userSockets.get(player2.playerId) ? new Set(Array.from(userSockets.get(player2.playerId))) : new Set(),
+              socketIds: userSockets.get(player2.playerId)
+                ? new Set(Array.from(userSockets.get(player2.playerId)))
+                : new Set(),
             },
             {
               ...player1,
               symbol: "O",
-              socketIds: userSockets.get(player1.playerId) ? new Set(Array.from(userSockets.get(player1.playerId))) : new Set(),
+              socketIds: userSockets.get(player1.playerId)
+                ? new Set(Array.from(userSockets.get(player1.playerId)))
+                : new Set(),
             },
           ],
           board: Array(9).fill(null),
@@ -273,10 +284,11 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   socket.on("checkActiveGame", async () => {
     try {
       // First check in-memory games
-      const activeGame = Object.values(games).find(game =>
-        game.players.some(p => p.playerId === playerId) &&
-        !game.state?.includes('game_over') &&
-        game.state !== 'cancelled'
+      const activeGame = Object.values(games).find(
+        (game) =>
+          game.players.some((p) => p.playerId === playerId) &&
+          !game.state?.includes("game_over") &&
+          game.state !== "cancelled",
       );
 
       if (activeGame) {
@@ -287,18 +299,15 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       // If not found in memory, check database
       const dbGame = await prisma.game.findFirst({
         where: {
-          OR: [
-            { player1Id: playerId },
-            { player2Id: playerId }
-          ],
+          OR: [{ player1Id: playerId }, { player2Id: playerId }],
           AND: {
             state: {
-              notIn: ['game_over_win', 'game_over_draw', 'cancelled']
-            }
-          }
+              notIn: ["game_over_win", "game_over_draw", "cancelled"],
+            },
+          },
         },
         include: { player1: true, player2: true },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       });
 
       if (dbGame) {
@@ -307,7 +316,9 @@ export function registerGameHandlers(io, socket, games, userSockets) {
           id: dbGame.id,
           players: [
             { playerId: dbGame.player1.id, symbol: "X", isOnline: false },
-            ...(dbGame.player2 ? [{ playerId: dbGame.player2.id, symbol: "O", isOnline: false }] : [])
+            ...(dbGame.player2
+              ? [{ playerId: dbGame.player2.id, symbol: "O", isOnline: false }]
+              : []),
           ],
           board: Array(9).fill(null),
           currentPlayer: dbGame.player1Id,
