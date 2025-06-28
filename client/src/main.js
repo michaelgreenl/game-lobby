@@ -26,7 +26,6 @@ if (authStore.isAuthenticated) {
 }
 
 // Prevent false disconnections when user opens/closes other tabs
-let isPageVisible = true;
 let disconnectTimeout = null;
 
 function handleVisibilityChange() {
@@ -48,7 +47,7 @@ function handleVisibilityChange() {
       clearTimeout(disconnectTimeout);
       disconnectTimeout = null;
     }
-    
+
     // Reconnect if disconnected
     if (!socket.connected && authStore.isAuthenticated) {
       socket.auth.token = authStore.token;
