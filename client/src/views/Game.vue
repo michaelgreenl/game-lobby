@@ -5,7 +5,7 @@
       :opponentWantsRematch="gameStore.opponentWantsRematch" :disconnectCountdown="gameStore.disconnectCountdown"
       @rematch="gameStore.playAgain(gameStore.game.id)" @exitToLobby="exitToLobby" @move="makeMove"
       @cancelGame="cancelGame" @createNewGame="createNewGame" />
-    <div v-else>
+    <div v-else class="loading-game">
       <p>Loading game...</p>
     </div>
   </div>
@@ -78,3 +78,21 @@ export default {
   name: "GameView",
 }
 </script>
+
+<style lang="scss" scoped>
+@use 'sass:map';
+
+.game-view-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px); // Adjust based on nav height
+  padding: map.get($spacers, 3);
+}
+
+.loading-game {
+  text-align: center;
+  color: $color-text-medium;
+  font-size: 1.2rem;
+}
+</style>
