@@ -19,23 +19,24 @@
       <p>Your symbol: {{ mySymbol }}</p>
       <p v-if="isMyTurn">It's your turn!</p>
       <p v-else>Waiting for opponent...</p>
+      <button @click="emit('forfeit')" class="forfeit-button">Forfeit</button>
     </div>
-    <div v-else-if="props.game.state?.includes('game_over')">
+    <div v-else-if="props.game.state?.includes('game_over')" class="game-over-section">
       <h2>Game Over!</h2>
       <p v-if="props.game.state === 'game_over_win'">
         Winner is: {{ props.game.winner === props.playerId ? 'You!:)' : 'Opponent:`(' }}
       </p>
       <p v-if="props.game.state === 'game_over_draw'">It's a draw!</p>
-      <p v-if="props.rematchRequested">Waiting for opponent...</p>
-      <p v-if="props.opponentWantsRematch">Opponent wants a rematch!</p>
-      <button @click="emit('createNewGame')">New Game</button>
-      <button 
-        :class="{ disabled: props.opponentDisconnected }" 
-        :disabled="props.opponentDisconnected"
-        @click="emit('rematch')"
-      >
-        {{ props.opponentDisconnected ? 'Rematch (Opponent Disconnected)' : 'Rematch' }}
-      </button>
+      <p v-if="props.rematchRequested" class="rematch-status">Waiting for opponent...</p>
+      <p v-if="props.opponentWantsRematch" class="rematch-status">Opponent wants a rematch!</p>
+      <div class="game-actions">
+        <button @click="emit('createNewGame')" class="new-game-button">New Game</button>
+        <button :class="{ disabled: props.opponentDisconnected }" :disabled="props.opponentDisconnected"
+          @click="emit('rematch')" class="rematch-button">
+          {{ props.opponentDisconnected ? 'Rematch (Opponent Disconnected)' : 'Rematch' }}
+        </button>
+        <button @click="emit('exitToLobby')" class="exit-button">Back to Lobby</button>
+      </div>
     </div>
 
     <div class="board" :class="{
@@ -61,7 +62,7 @@ const props = defineProps({
   disconnectCountdown: Number,
 });
 
-const emit = defineEmits(['exitToLobby', 'rematch', 'move', 'cancelGame', 'createNewGame']);
+const emit = defineEmits(['exitToLobby', 'rematch', 'move', 'cancelGame', 'createNewGame', 'forfeit']);
 
 const isMyTurn = computed(() => props.game.currentPlayer === props.playerId);
 const mySymbol = computed(() => {
@@ -76,77 +77,173 @@ const cellClicked = (index) => {
 };
 </script>
 
-<style>
-.board {
-  display: grid;
-  grid-template-columns: repeat(3, 100px);
-  grid-gap: 5px;
-}
+<style lang="scss" scoped>
+@use 'sass:map';
+@use 'sass:color';
 
-.cell {
-  width: 100px;
-  height: 100px;
-  border: 1px solid black;
+.game-board-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  font-size: 2em;
-  cursor: pointer;
-}
+  gap: map.get($spacers, 4);
+  padding: map.get($spacers, 3);
+  background-color: $color-background-medium;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  max-width: 500px;
+  margin: 0 auto;
 
-.disabled {
-  pointer-events: none;
-  opacity: 0.6;
+  @include bp-md-tablet {
+    padding: map.get($spacers, 5);
+  }
 }
 
 .disconnect-message {
-  background-color: #ffebee;
-  border: 2px solid #f44336;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
+  background-color: color.adjust($color-error, $lightness: 10%);
+  border: 1px solid $color-error;
+  border-radius: $border-radius;
+  padding: map.get($spacers, 3);
   text-align: center;
+  width: 100%;
+
+  p {
+    margin: 0;
+    color: $color-error;
+    font-weight: $font-weight-semibold;
+  }
+
+  .disconnect-timer {
+    font-size: 0.9em;
+    color: color.adjust($color-error, $lightness: 10%);
+  }
 }
 
-.disconnect-message p {
-  margin: 0;
-  color: #d32f2f;
-  font-weight: bold;
-  font-size: 1.1em;
-}
-
-.disconnect-timer {
-  font-size: 0.8em;
-  color: #666;
-}
-
-.waiting-game {
+.waiting-game,
+.active-game,
+.game-over-section {
   text-align: center;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  width: 100%;
+
+  h2 {
+    color: $color-text-light;
+    margin-bottom: map.get($spacers, 2);
+  }
+
+  p {
+    color: $color-text-medium;
+    margin-bottom: map.get($spacers, 2);
+  }
 }
 
-.waiting-game h2 {
-  margin-bottom: 10px;
-}
-
-.waiting-game p {
-  margin: 0;
+.cancel-button,
+.new-game-button,
+.exit-button,
+.forfeit-button,
+.rematch-button {
+  padding: map.get($spacers, 2) map.get($spacers, 3);
+  font-size: 1rem;
+  font-weight: $font-weight-semibold;
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .cancel-button {
-  background-color: #f44336;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 10px;
+  background-color: $color-error;
+  color: $color-text-light;
+
+  &:hover {
+    background-color: color.adjust($color-error, $lightness: 10%);
+  }
 }
 
-.cancel-button:hover {
-  background-color: #d32f2f;
+.game-over-section {
+  .rematch-status {
+    font-style: italic;
+    color: $color-text-dark;
+  }
+
+  .game-actions {
+    display: flex;
+    gap: map.get($spacers, 3);
+    justify-content: center;
+    margin-top: map.get($spacers, 4);
+
+    .new-game-button {
+      background-color: $color-accent;
+      color: $color-text-light;
+
+      &:hover {
+        background-color: color.adjust($color-accent, $lightness: 10%);
+      }
+    }
+
+    .rematch-button {
+      background-color: $color-success;
+      color: $color-text-light;
+
+      &:hover {
+        background-color: color.adjust($color-success, $lightness: 10%);
+      }
+
+      &.disabled {
+        background-color: $color-background-light;
+        color: $color-text-dark;
+        cursor: not-allowed;
+      }
+    }
+
+    .exit-button {
+      background-color: $color-accent;
+      color: $color-text-light;
+
+      &:hover {
+        background-color: color.adjust($color-accent, $lightness: 10%);
+      }
+    }
+
+    .forfeit-button {
+      background-color: $color-error;
+      color: $color-text-light;
+
+      &:hover {
+        background-color: color.adjust($color-error, $lightness: 10%);
+      }
+    }
+  }
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  grid-template-rows: repeat(3, 100px);
+  gap: map.get($spacers, 1);
+  background-color: $color-border;
+  border-radius: $border-radius;
+  overflow: hidden;
+  box-shadow: $box-shadow-sm;
+
+  .cell {
+    width: 100%;
+    height: 100%;
+    background-color: $color-background-dark;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 3em;
+    font-weight: $font-weight-bold;
+    color: $color-white;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: color.adjust($color-background-dark, $lightness: 5%);
+    }
+  }
+
+  &.disabled {
+    pointer-events: none;
+    opacity: 0.7;
+  }
 }
 </style>

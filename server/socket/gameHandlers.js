@@ -55,7 +55,9 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       game.state !== "waiting_for_player_2" ||
       game.players[0].playerId === playerId
     ) {
-      console.log(`Player ${playerId} failed to join game ${gameId}. Conditions not met.`);
+      console.log(
+        `Player ${playerId} failed to join game ${gameId}. Conditions not met.`,
+      );
       return;
     }
 
@@ -86,7 +88,9 @@ export function registerGameHandlers(io, socket, games, userSockets) {
   });
 
   socket.on("makeMove", async ({ gameId, index }) => {
-    console.log(`Player ${playerId} is making a move in game ${gameId} at index ${index}`);
+    console.log(
+      `Player ${playerId} is making a move in game ${gameId} at index ${index}`,
+    );
     const game = games[gameId];
     if (
       !game ||
@@ -336,4 +340,85 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       socket.emit("activeGameResponse", null);
     }
   });
+
+  socket.on("cancelGame", async (gameId) => {
+    console.log(`Player ${playerId} is attempting to cancel game: ${gameId}`);
+    const game = games[gameId];
+
+    // Basic validation
+    if (!game || game.players[0].playerId !== playerId) {
+      console.log(
+        `Player ${playerId} failed to cancel game ${gameId}. Conditions not met.`,
+      );
+      return;
+    }
+
+    // More robust validation: only cancel if waiting for player 2
+    if (game.state !== "waiting_for_player_2") {
+      console.log(
+        `Game ${gameId} cannot be cancelled as it's not in a waiting state.`,
+      );
+      return;
+    }
+
+    try {
+      // Update the game state in the database to 'cancelled'
+      await prisma.game.update({
+        where: { id: gameId },
+        data: { state: "cancelled" },
+      });
+
+      // Notify the creator's client that the game has been successfully cancelled
+      io.to(gameId).emit("gameCancelled", gameId);
+
+      // Remove the game from the in-memory cache
+      delete games[gameId];
+
+      // Update the lobby for all other clients
+      updateLobby();
+
+      console.log(`Game ${gameId} has been cancelled by player ${playerId}.`);
+    } catch (error) {
+      console.error(`Failed to cancel game ${gameId}:`, error);
+      // Optionally, emit an error event back to the client
+      socket.emit("cancelGameError", { message: "Error cancelling the game." });
+    }
+  });
+
+  socket.on("forfeitGame", async (gameId) => {
+    console.log(`Player ${playerId} is forfeiting game: ${gameId}`);
+    const game = games[gameId];
+
+    if (!game || !game.players.some((p) => p.playerId === playerId)) {
+      console.log(`Player ${playerId} cannot forfeit game ${gameId} as they are not a player.`);
+      return;
+    }
+
+    if (game.state !== "in_progress") {
+      console.log(`Game ${gameId} cannot be forfeited as it is not in progress.`);
+      return;
+    }
+
+    const opponent = game.players.find((p) => p.playerId !== playerId);
+
+    try {
+      await prisma.game.update({
+        where: { id: gameId },
+        data: {
+          state: "game_over_win",
+          winnerId: opponent.playerId,
+        },
+      });
+
+      game.state = "game_over_win";
+      game.winner = opponent.playerId;
+
+      io.to(gameId).emit("gameOver", game);
+
+      setTimeout(() => delete games[gameId], 60000);
+    } catch (error) {
+      console.error(`Failed to forfeit game ${gameId}:`, error);
+    }
+  });
 }
+("");

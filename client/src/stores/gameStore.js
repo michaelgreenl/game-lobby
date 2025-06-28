@@ -65,12 +65,14 @@ export const useGameStore = defineStore('game', () => {
           opponentWantsRematch.value = true;
         });
 
-        socket.on('gameCancelled', (data) => {
+        socket.on('gameCancelled', (cancelledGameId) => {
+          // Remove the cancelled game from the local list
+          games.value = games.value.filter(g => g.id !== cancelledGameId);
+
           game.value = {};
           opponentDisconnected.value = false;
           rematchRequested.value = false;
           opponentWantsRematch.value = false;
-          alert(data.message);
           router.push('/lobby');
         });
 
@@ -110,7 +112,14 @@ export const useGameStore = defineStore('game', () => {
       socket.emit('playerReadyForRematch', { gameId });
     }
 
+    function forfeitGame(gameId) {
+      socket.emit('forfeitGame', gameId);
+    }
+
     function exitToLobby() {
+      if (game.value && game.value.id) {
+        socket.disconnect();
+      }
       game.value = {};
     }
 
@@ -173,6 +182,6 @@ export const useGameStore = defineStore('game', () => {
 
     return {
         games, game, opponentDisconnected, rematchRequested, opponentWantsRematch, disconnectCountdown,
-        initializeSocketListeners, createGame, joinGame, cancelGame, makeMove, playAgain, exitToLobby, checkForActiveGame
+        initializeSocketListeners, createGame, joinGame, cancelGame, makeMove, playAgain, exitToLobby, checkForActiveGame, forfeitGame
     };
 });
