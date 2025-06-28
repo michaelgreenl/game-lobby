@@ -113,6 +113,9 @@ export const useGameStore = defineStore('game', () => {
     }
 
     function exitToLobby() {
+      if (game.value && game.value.id) {
+        socket.disconnect();
+      }
       game.value = {};
     }
 

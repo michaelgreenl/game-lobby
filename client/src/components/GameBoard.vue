@@ -34,6 +34,7 @@
           @click="emit('rematch')" class="rematch-button">
           {{ props.opponentDisconnected ? 'Rematch (Opponent Disconnected)' : 'Rematch' }}
         </button>
+        <button @click="emit('exitToLobby')" class="exit-button">Back to Lobby</button>
       </div>
     </div>
 
@@ -135,6 +136,7 @@ const cellClicked = (index) => {
 
 .cancel-button,
 .new-game-button,
+.exit-button,
 .rematch-button {
   padding: map.get($spacers, 2) map.get($spacers, 3);
   font-size: 1rem;
@@ -186,6 +188,15 @@ const cellClicked = (index) => {
         background-color: $color-background-light;
         color: $color-text-dark;
         cursor: not-allowed;
+      }
+    }
+
+    .exit-button {
+      background-color: $color-accent;
+      color: $color-text-light;
+
+      &:hover {
+        background-color: color.adjust($color-accent, $lightness: 10%);
       }
     }
   }
