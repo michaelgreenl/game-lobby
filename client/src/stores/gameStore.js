@@ -112,6 +112,10 @@ export const useGameStore = defineStore('game', () => {
       socket.emit('playerReadyForRematch', { gameId });
     }
 
+    function forfeitGame(gameId) {
+      socket.emit('forfeitGame', gameId);
+    }
+
     function exitToLobby() {
       if (game.value && game.value.id) {
         socket.disconnect();
@@ -178,6 +182,6 @@ export const useGameStore = defineStore('game', () => {
 
     return {
         games, game, opponentDisconnected, rematchRequested, opponentWantsRematch, disconnectCountdown,
-        initializeSocketListeners, createGame, joinGame, cancelGame, makeMove, playAgain, exitToLobby, checkForActiveGame
+        initializeSocketListeners, createGame, joinGame, cancelGame, makeMove, playAgain, exitToLobby, checkForActiveGame, forfeitGame
     };
 });

@@ -19,6 +19,7 @@
       <p>Your symbol: {{ mySymbol }}</p>
       <p v-if="isMyTurn">It's your turn!</p>
       <p v-else>Waiting for opponent...</p>
+      <button @click="emit('forfeit')" class="forfeit-button">Forfeit</button>
     </div>
     <div v-else-if="props.game.state?.includes('game_over')" class="game-over-section">
       <h2>Game Over!</h2>
@@ -61,7 +62,7 @@ const props = defineProps({
   disconnectCountdown: Number,
 });
 
-const emit = defineEmits(['exitToLobby', 'rematch', 'move', 'cancelGame', 'createNewGame']);
+const emit = defineEmits(['exitToLobby', 'rematch', 'move', 'cancelGame', 'createNewGame', 'forfeit']);
 
 const isMyTurn = computed(() => props.game.currentPlayer === props.playerId);
 const mySymbol = computed(() => {
@@ -137,6 +138,7 @@ const cellClicked = (index) => {
 .cancel-button,
 .new-game-button,
 .exit-button,
+.forfeit-button,
 .rematch-button {
   padding: map.get($spacers, 2) map.get($spacers, 3);
   font-size: 1rem;
@@ -197,6 +199,15 @@ const cellClicked = (index) => {
 
       &:hover {
         background-color: color.adjust($color-accent, $lightness: 10%);
+      }
+    }
+
+    .forfeit-button {
+      background-color: $color-error;
+      color: $color-text-light;
+
+      &:hover {
+        background-color: color.adjust($color-error, $lightness: 10%);
       }
     }
   }

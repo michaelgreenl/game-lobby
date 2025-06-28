@@ -4,7 +4,7 @@
       :opponentDisconnected="gameStore.opponentDisconnected" :rematchRequested="gameStore.rematchRequested"
       :opponentWantsRematch="gameStore.opponentWantsRematch" :disconnectCountdown="gameStore.disconnectCountdown"
       @rematch="gameStore.playAgain(gameStore.game.id)" @exitToLobby="exitToLobby" @move="makeMove"
-      @cancelGame="cancelGame" @createNewGame="createNewGame" />
+      @cancelGame="cancelGame" @createNewGame="createNewGame" @forfeit="forfeit" />
     <div v-else class="loading-game">
       <p>Loading game...</p>
     </div>
@@ -70,6 +70,10 @@ function cancelGame() {
 
 function createNewGame() {
   gameStore.createGame();
+}
+
+function forfeit() {
+  gameStore.forfeitGame(gameStore.game.id);
 }
 </script>
 

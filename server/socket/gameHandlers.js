@@ -384,5 +384,41 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       socket.emit("cancelGameError", { message: "Error cancelling the game." });
     }
   });
+
+  socket.on("forfeitGame", async (gameId) => {
+    console.log(`Player ${playerId} is forfeiting game: ${gameId}`);
+    const game = games[gameId];
+
+    if (!game || !game.players.some((p) => p.playerId === playerId)) {
+      console.log(`Player ${playerId} cannot forfeit game ${gameId} as they are not a player.`);
+      return;
+    }
+
+    if (game.state !== "in_progress") {
+      console.log(`Game ${gameId} cannot be forfeited as it is not in progress.`);
+      return;
+    }
+
+    const opponent = game.players.find((p) => p.playerId !== playerId);
+
+    try {
+      await prisma.game.update({
+        where: { id: gameId },
+        data: {
+          state: "game_over_win",
+          winnerId: opponent.playerId,
+        },
+      });
+
+      game.state = "game_over_win";
+      game.winner = opponent.playerId;
+
+      io.to(gameId).emit("gameOver", game);
+
+      setTimeout(() => delete games[gameId], 60000);
+    } catch (error) {
+      console.error(`Failed to forfeit game ${gameId}:`, error);
+    }
+  });
 }
 ("");
