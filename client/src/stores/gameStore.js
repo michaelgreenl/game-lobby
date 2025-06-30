@@ -88,6 +88,9 @@ export const useGameStore = defineStore('game', () => {
     }
 
     function createGame() {
+      if (game.value && game.value.id) {
+        leaveGame(game.value.id);
+      }
       socket.emit('createGame');
     }
 
@@ -116,11 +119,18 @@ export const useGameStore = defineStore('game', () => {
       socket.emit('forfeitGame', gameId);
     }
 
+    function leaveGame(gameId) {
+      socket.emit('leaveGame', gameId);
+      game.value = {};
+      opponentDisconnected.value = false;
+      rematchRequested.value = false;
+      opponentWantsRematch.value = false;
+    }
+
     function exitToLobby() {
       if (game.value && game.value.id) {
-        socket.disconnect();
+        leaveGame(game.value.id);
       }
-      game.value = {};
     }
 
     function checkForActiveGame() {
