@@ -14,6 +14,7 @@ const PORT = process.env.PORT ? process.env.PORT : 3000;
 // --- Server Setup ---
 const app = express();
 
+app.options("*", cors());
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
@@ -88,6 +89,6 @@ export function stopServer() {
   });
 }
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== "test") {
   startServer();
 }
