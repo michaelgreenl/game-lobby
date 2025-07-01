@@ -9,6 +9,9 @@
     "test": "vitest",
     "build": "npx prisma migrate deploy && npx prisma generate"
   },
+  "prisma": {
+    "schema": "db/prisma/schema.prisma"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
