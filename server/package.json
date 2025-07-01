@@ -4,8 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest run",
-    "dev": "nodemon index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "vitest",
+    "build": "npx prisma migrate deploy && npx prisma generate"
   },
   "keywords": [],
   "author": "",
