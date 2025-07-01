@@ -385,6 +385,29 @@ export function registerGameHandlers(io, socket, games, userSockets) {
     }
   });
 
+  socket.on("leaveGame", (gameId) => {
+    console.log(`Player ${playerId} is leaving game: ${gameId}`);
+    const game = games[gameId];
+
+    if (!game) {
+      console.log(`Game ${gameId} not found for player ${playerId} to leave.`);
+      return;
+    }
+
+    // Notify the other player that this player has left
+    const opponent = game.players.find((p) => p.playerId !== playerId);
+    if (opponent) {
+      const opponentSockets = userSockets.get(opponent.playerId);
+      if (opponentSockets) {
+        for (const socketId of opponentSockets) {
+          io.to(socketId).emit("playerDisconnected", { gameId });
+        }
+      }
+    }
+
+    socket.leave(gameId);
+  });
+
   socket.on("forfeitGame", async (gameId) => {
     console.log(`Player ${playerId} is forfeiting game: ${gameId}`);
     const game = games[gameId];
