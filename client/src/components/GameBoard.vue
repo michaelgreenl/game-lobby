@@ -15,11 +15,11 @@
     </div>
 
     <div v-else-if="props.game.state === 'in_progress'" class="active-game">
+      <button @click="emit('forfeit')" class="forfeit-button">Forfeit</button>
       <h2>Game in Progress</h2>
       <p>Your symbol: {{ mySymbol }}</p>
       <p v-if="isMyTurn">It's your turn!</p>
       <p v-else>Waiting for opponent...</p>
-      <button @click="emit('forfeit')" class="forfeit-button">Forfeit</button>
     </div>
     <div v-else-if="props.game.state?.includes('game_over')" class="game-over-section">
       <h2>Game Over!</h2>
@@ -146,6 +146,11 @@ const cellClicked = (index) => {
   border-radius: $border-radius;
   cursor: pointer;
   transition: background-color 0.3s ease;
+}
+
+.forfeit-button {
+  margin-bottom: 1em;
+  margin-left: 70%;
 }
 
 .cancel-button {
