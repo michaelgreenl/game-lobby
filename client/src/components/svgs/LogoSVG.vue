@@ -16,7 +16,7 @@
 defineProps({
   size: {
     type: Number,
-    default: 50,
+    default: 35,
   },
   fill: {
     type: String,

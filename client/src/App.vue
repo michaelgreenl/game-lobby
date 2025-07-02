@@ -3,10 +3,9 @@
     <nav>
       <div class="nav-title">
         <LogoSVG fill="#fff" />
-        <h1>Game Lobby</h1>
+        <h1>GameLobby</h1>
       </div>
       <div v-if="auth.isAuthenticated" class="nav-router">
-        <span>Welcome, {{ auth.user.username }}!</span>
         <button @click="auth.logout()">Logout</button>
       </div>
     </nav>
@@ -55,6 +54,10 @@ nav {
     display: flex;
     align-items: center;
     gap: map.get($spacers, 2);
+
+    h1 {
+      font-family: $secondary-font-family;
+    }
   }
 
   .nav-router {
@@ -82,8 +85,9 @@ nav {
     button {
       background-color: $color-accent;
       color: $color-text-light;
+      font-weight: bold;
       border: none;
-      padding: map.get($spacers, 1) map.get($spacers, 2);
+      padding: map.get($spacers, 2) map.get($spacers, 3);
       border-radius: $border-radius;
       cursor: pointer;
       transition: background-color 0.3s ease;
@@ -112,7 +116,7 @@ body,
   margin: 0;
   padding: 0;
   background-color: $color-background-dark;
-  font-family: $font-family-sans-serif;
+  font-family: $primary-font-family;
   color: $color-text-light;
 }
 
