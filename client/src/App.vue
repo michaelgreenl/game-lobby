@@ -1,8 +1,11 @@
 <template>
   <div id="app-layout">
     <nav>
-      <h1>Game Lobby</h1>
-      <div v-if="auth.isAuthenticated">
+      <div class="nav-title">
+        <LogoSVG fill="#fff" />
+        <h1>Game Lobby</h1>
+      </div>
+      <div v-if="auth.isAuthenticated" class="nav-router">
         <span>Welcome, {{ auth.user.username }}!</span>
         <button @click="auth.logout()">Logout</button>
       </div>
@@ -16,6 +19,7 @@
 
 <script setup>
 import { useAuthStore } from './stores/authStore';
+import LogoSVG from './components/svgs/LogoSVG.vue';
 const auth = useAuthStore();
 </script>
 
@@ -47,7 +51,13 @@ nav {
     }
   }
 
-  div {
+  .nav-title {
+    display: flex;
+    align-items: center;
+    gap: map.get($spacers, 2);
+  }
+
+  .nav-router {
     display: flex;
     align-items: center;
     gap: map.get($spacers, 3);
