@@ -31,7 +31,12 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       games[gameId] = {
         id: gameId,
         players: [
-          { playerId, socketId: socket.id, symbol: "X", isOnline: true },
+          {
+            playerId,
+            socketIds: new Set([socket.id]),
+            symbol: "X",
+            isOnline: true,
+          },
         ],
         board: Array(9).fill(null),
         currentPlayer: playerId,
@@ -72,7 +77,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
 
       game.players.push({
         playerId,
-        socketId: socket.id,
+        socketIds: new Set([socket.id]),
         symbol: "O",
         isOnline: true,
       });
@@ -413,12 +418,16 @@ export function registerGameHandlers(io, socket, games, userSockets) {
     const game = games[gameId];
 
     if (!game || !game.players.some((p) => p.playerId === playerId)) {
-      console.log(`Player ${playerId} cannot forfeit game ${gameId} as they are not a player.`);
+      console.log(
+        `Player ${playerId} cannot forfeit game ${gameId} as they are not a player.`,
+      );
       return;
     }
 
     if (game.state !== "in_progress") {
-      console.log(`Game ${gameId} cannot be forfeited as it is not in progress.`);
+      console.log(
+        `Game ${gameId} cannot be forfeited as it is not in progress.`,
+      );
       return;
     }
 
@@ -444,4 +453,3 @@ export function registerGameHandlers(io, socket, games, userSockets) {
     }
   });
 }
-("");

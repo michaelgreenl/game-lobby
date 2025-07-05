@@ -1,10 +1,11 @@
 <template>
   <div class="game-board-container">
-    <!-- Disconnect message - show prominently at the top -->
     <div v-if="props.opponentDisconnected" class="disconnect-message">
-      <p>⚠️ Opponent is disconnected</p>
-      <p v-if="props.game.state === 'in_progress'" class="disconnect-timer">
-        You will win in {{ props.disconnectCountdown }} seconds if they don't reconnect
+      <span v-if="props.game.state === 'in_progress'">
+        Opponent disconnected. Auto-forfeit in 0:{{ props.disconnectCountdown }}
+      </span>
+      <p v-else>
+        Opponent disconnected.
       </p>
     </div>
 
@@ -15,7 +16,8 @@
     </div>
 
     <div v-else-if="props.game.state === 'in_progress'" class="active-game">
-      <button @click="emit('forfeit')" class="forfeit-button">Forfeit</button>
+      <button @click="emit('forfeit')" class="forfeit-button" :class="{ disabled: props.opponentDisconnected }"
+        :disabled="props.opponentDisconnected">Forfeit</button>
       <h2>Game in Progress</h2>
       <p>Your symbol: {{ mySymbol }}</p>
       <p v-if="isMyTurn">It's your turn!</p>
@@ -33,7 +35,7 @@
         <button @click="emit('createNewGame')" class="new-game-button">New Game</button>
         <button :class="{ disabled: props.opponentDisconnected }" :disabled="props.opponentDisconnected"
           @click="emit('rematch')" class="rematch-button">
-          {{ props.opponentDisconnected ? 'Rematch (Opponent Disconnected)' : 'Rematch' }}
+          Rematch
         </button>
         <button @click="emit('exitToLobby')" class="exit-button">Back to Lobby</button>
       </div>
@@ -98,26 +100,7 @@ const cellClicked = (index) => {
   }
 }
 
-.disconnect-message {
-  background-color: color.adjust($color-error, $lightness: 10%);
-  border: 1px solid $color-error;
-  border-radius: $border-radius;
-  padding: map.get($spacers, 3);
-  text-align: center;
-  width: 100%;
-
-  p {
-    margin: 0;
-    color: $color-error;
-    font-weight: $font-weight-semibold;
-  }
-
-  .disconnect-timer {
-    font-size: 0.9em;
-    color: color.adjust($color-error, $lightness: 10%);
-  }
-}
-
+.disconnect-message,
 .waiting-game,
 .active-game,
 .game-over-section {
@@ -135,6 +118,11 @@ const cellClicked = (index) => {
   }
 }
 
+.active-game {
+  display: flex;
+  flex-direction: column;
+}
+
 .cancel-button,
 .new-game-button,
 .exit-button,
@@ -150,7 +138,8 @@ const cellClicked = (index) => {
 
 .forfeit-button {
   margin-bottom: 1em;
-  margin-left: 70%;
+  // margin-left: 7em;
+  align-self: flex-end;
 }
 
 .cancel-button {
@@ -213,6 +202,12 @@ const cellClicked = (index) => {
 
       &:hover {
         background-color: color.adjust($color-error, $lightness: 10%);
+      }
+
+      &.disabled {
+        background-color: $color-background-light;
+        color: $color-text-dark;
+        cursor: not-allowed;
       }
     }
   }
