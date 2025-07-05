@@ -16,8 +16,8 @@
     </div>
 
     <div v-else-if="props.game.state === 'in_progress'" class="active-game">
-      <button @click="emit('forfeit')"
-        :class="{ disabled: props.opponentDisconnected } + 'forfeit-button'">Forfeit</button>
+      <button @click="emit('forfeit')" class="forfeit-button" :class="{ disabled: props.opponentDisconnected }"
+        :disabled="props.opponentDisconnected">Forfeit</button>
       <h2>Game in Progress</h2>
       <p>Your symbol: {{ mySymbol }}</p>
       <p v-if="isMyTurn">It's your turn!</p>
@@ -35,7 +35,7 @@
         <button @click="emit('createNewGame')" class="new-game-button">New Game</button>
         <button :class="{ disabled: props.opponentDisconnected }" :disabled="props.opponentDisconnected"
           @click="emit('rematch')" class="rematch-button">
-          {{ props.opponentDisconnected ? 'Rematch (Opponent Disconnected)' : 'Rematch' }}
+          Rematch
         </button>
         <button @click="emit('exitToLobby')" class="exit-button">Back to Lobby</button>
       </div>
@@ -118,6 +118,11 @@ const cellClicked = (index) => {
   }
 }
 
+.active-game {
+  display: flex;
+  flex-direction: column;
+}
+
 .cancel-button,
 .new-game-button,
 .exit-button,
@@ -133,7 +138,8 @@ const cellClicked = (index) => {
 
 .forfeit-button {
   margin-bottom: 1em;
-  margin-left: 70%;
+  // margin-left: 7em;
+  align-self: flex-end;
 }
 
 .cancel-button {
@@ -196,6 +202,12 @@ const cellClicked = (index) => {
 
       &:hover {
         background-color: color.adjust($color-error, $lightness: 10%);
+      }
+
+      &.disabled {
+        background-color: $color-background-light;
+        color: $color-text-dark;
+        cursor: not-allowed;
       }
     }
   }
