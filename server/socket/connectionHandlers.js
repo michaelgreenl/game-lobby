@@ -12,7 +12,9 @@ export function handleDisconnect(io, socket, games, disconnectTimeouts) {
   if (userSockets.has(playerId)) {
     const set = userSockets.get(playerId);
     set.delete(socket.id);
-    console.log(`Socket ${socket.id} removed from user ${playerId}. Sockets remaining: ${set.size}`);
+    console.log(
+      `Socket ${socket.id} removed from user ${playerId}. Sockets remaining: ${set.size}`,
+    );
     if (set.size === 0) {
       userSockets.delete(playerId);
       console.log(`User ${playerId} has no more sockets connected.`);
