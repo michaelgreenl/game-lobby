@@ -413,12 +413,16 @@ export function registerGameHandlers(io, socket, games, userSockets) {
     const game = games[gameId];
 
     if (!game || !game.players.some((p) => p.playerId === playerId)) {
-      console.log(`Player ${playerId} cannot forfeit game ${gameId} as they are not a player.`);
+      console.log(
+        `Player ${playerId} cannot forfeit game ${gameId} as they are not a player.`,
+      );
       return;
     }
 
     if (game.state !== "in_progress") {
-      console.log(`Game ${gameId} cannot be forfeited as it is not in progress.`);
+      console.log(
+        `Game ${gameId} cannot be forfeited as it is not in progress.`,
+      );
       return;
     }
 
