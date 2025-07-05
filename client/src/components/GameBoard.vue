@@ -2,7 +2,7 @@
   <div class="game-board-container">
     <div v-if="props.opponentDisconnected" class="disconnect-message">
       <span v-if="props.game.state === 'in_progress'">
-        Opponent disconnected. Auto-forfeit in 0:{{ props.disconnectCountdown }}
+        Opponent disconnected. Auto-forfeit in 0:{{ formattedCountdown }}
       </span>
       <p v-else>
         Opponent disconnected.
@@ -77,6 +77,10 @@ const cellClicked = (index) => {
     emit('move', index);
   }
 };
+
+const formattedCountdown = computed(() => {
+  return String(props.disconnectCountdown).padStart(2, '0');
+})
 </script>
 
 <style lang="scss" scoped>
