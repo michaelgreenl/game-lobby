@@ -1,4 +1,4 @@
-<template>
+'''<template>
   <div class="auth-container">
     <form @submit.prevent="handleRegister" class="auth-form">
       <h2>Register</h2>
@@ -8,8 +8,36 @@
       </div>
       <div class="form-group">
         <label for="password">Password</label>
-        <input id="password" v-model="password" type="password" required />
+        <div class="password-input-wrapper">
+          <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" required />
+          <button type="button" @click="showPassword = !showPassword" class="toggle-password">
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
       </div>
+      <div class="form-group">
+        <label for="retype-password">Re-type Password</label>
+        <div class="password-input-wrapper">
+          <input id="retype-password" v-model="retypePassword" :type="showPassword ? 'text' : 'password'" required />
+          <button type="button" @click="showPassword = !showPassword" class="toggle-password">
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+      </div>
+      <ul class="password-requirements">
+        <li :class="{ 'valid': passwordRequirements.length, 'invalid': !passwordRequirements.length && password }">
+          <span class="icon">{{ !password ? '•' : (passwordRequirements.length ? '✓' : '✗') }}</span>
+          At least 8 characters
+        </li>
+        <li :class="{ 'valid': passwordRequirements.uppercase, 'invalid': !passwordRequirements.uppercase && password }">
+          <span class="icon">{{ !password ? '•' : (passwordRequirements.uppercase ? '✓' : '✗') }}</span>
+          Contains an uppercase letter
+        </li>
+        <li :class="{ 'valid': passwordRequirements.number, 'invalid': !passwordRequirements.number && password }">
+          <span class="icon">{{ !password ? '•' : (passwordRequirements.number ? '✓' : '✗') }}</span>
+          Contains a number
+        </li>
+      </ul>
       <button type="submit">Register</button>
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
       <p class="form-link">
@@ -20,18 +48,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 
 const username = ref('');
 const password = ref('');
+const retypePassword = ref('');
+const showPassword = ref(false);
 const errorMessage = ref(null);
 
 const authStore = useAuthStore();
 const router = useRouter();
 
+const passwordRequirements = computed(() => {
+  const length = password.value.length >= 8;
+  const uppercase = /[A-Z]/.test(password.value);
+  const number = /[0-9]/.test(password.value);
+  return { length, uppercase, number };
+});
+
 const handleRegister = async () => {
+  if (password.value !== retypePassword.value) {
+    errorMessage.value = 'Passwords do not match.';
+    return;
+  }
+
+  if (!Object.values(passwordRequirements.value).every(Boolean)) {
+    errorMessage.value = 'Password does not meet all requirements.';
+    return;
+  }
+
   errorMessage.value = null;
   const result = await authStore.register(username.value, password.value);
 
@@ -93,10 +140,66 @@ export default {
       border-radius: $border-radius;
       background-color: $color-background-dark;
       color: $color-text-light;
+      width: 100%;
 
       &:focus {
         outline: none;
         border-color: $color-accent;
+      }
+    }
+  }
+
+  .password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    input {
+      padding-right: 60px; // Make space for the button
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: $color-text-medium;
+      cursor: pointer;
+      font-size: 0.8rem;
+
+      &:hover {
+        color: $color-text-light;
+      }
+    }
+  }
+
+  .password-requirements {
+    list-style: none;
+    padding: 0;
+    margin-top: map.get($spacers, 2);
+    font-size: 0.9rem;
+    color: $color-text-medium;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: map.get($spacers, 2);
+      margin-bottom: map.get($spacers, 1);
+
+      .icon {
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      &.valid {
+        color: $color-success;
+        font-weight: $font-weight-semibold;
+      }
+
+      &.invalid {
+        color: $color-error;
       }
     }
   }
@@ -129,3 +232,4 @@ export default {
   }
 }
 </style>
+''

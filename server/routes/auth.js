@@ -5,12 +5,35 @@ import { prisma } from "../db/index.js";
 
 const router = Router();
 
+const validatePassword = (password) => {
+  const errors = [];
+  if (password.length < 8) {
+    errors.push("Password must be at least 8 characters long.");
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Password must contain at least one uppercase letter.");
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push("Password must contain at least one number.");
+  }
+  return errors;
+};
+
 router.post("/register", async (req, res) => {
   console.log("Received registration request with body:", req.body);
   const { username, password } = req.body;
   if (!username || !password) {
     console.log("Registration failed: Username or password missing.");
     return res.status(400).json({ message: "Username and password required" });
+  }
+
+  const passwordErrors = validatePassword(password);
+  if (passwordErrors.length > 0) {
+    console.log(`Registration failed for user ${username}:`, passwordErrors);
+    return res.status(400).json({
+      message: "Password does not meet requirements.",
+      errors: passwordErrors,
+    });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
