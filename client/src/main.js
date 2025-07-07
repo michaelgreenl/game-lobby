@@ -1,23 +1,33 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import App from './App.vue'
-import router from './router'
-import { useAuthStore } from './stores/authStore'
-import { useGameStore } from './stores/gameStore'
-import { socket } from './socket'
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import App from './App.vue';
+import router from './router';
+import { useAuthStore } from './stores/authStore';
+import { useGameStore } from './stores/gameStore';
+import { socket } from './socket';
 
-const app = createApp(App)
-const pinia = createPinia()
+const app = createApp(App);
+const pinia = createPinia();
 
 pinia.use(({ store }) => {
-  store.$router = router
-})
+  store.$router = router;
+});
 
-app.use(pinia)
-app.use(router)
+app.use(pinia);
+app.use(router);
 
-const authStore = useAuthStore()
-const gameStore = useGameStore()
+const authStore = useAuthStore();
+const gameStore = useGameStore();
+
+socket.on('connect_error', (err) => {
+  if (err.message === 'Authentication error: Invalid token') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    authStore.logout();
+    socket.disconnect();
+    router.push('/login');
+  }
+});
 
 if (authStore.isAuthenticated) {
   socket.auth.token = authStore.token;
@@ -69,5 +79,4 @@ function handleBeforeUnload(event) {
 document.addEventListener('visibilitychange', handleVisibilityChange);
 window.addEventListener('beforeunload', handleBeforeUnload);
 
-app.mount('#app')
-
+app.mount('#app');
