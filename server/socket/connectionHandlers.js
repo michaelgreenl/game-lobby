@@ -4,6 +4,18 @@ import { prisma } from "../db/index.js";
 // Global map: userId -> Set of socketIds
 export const userSockets = new Map();
 
+const emitToPlayers = (io, game, event, data) => {
+  if (!game || !game.players) return;
+  game.players.forEach((player) => {
+    const playerSockets = userSockets.get(player.playerId);
+    if (playerSockets) {
+      playerSockets.forEach((socketId) => {
+        io.to(socketId).emit(event, data);
+      });
+    }
+  });
+};
+
 export function handleDisconnect(io, socket, games, disconnectTimeouts) {
   console.log(`Client disconnected: ${socket.id}`);
   const playerId = socket.playerId;
@@ -86,7 +98,7 @@ export function handleDisconnect(io, socket, games, disconnectTimeouts) {
               }
               currentGame.state = "game_over_win";
               currentGame.winner = opponent.playerId;
-              io.to(gameId).emit("gameOver", currentGame);
+              emitToPlayers(io, currentGame, "gameOver", currentGame);
               delete games[gameId];
               disconnectTimeouts.delete(playerId);
             }
@@ -136,7 +148,7 @@ export function handleConnection(io, socket, games, disconnectTimeouts) {
           disconnectTimeouts.delete(playerId);
         }
         socket.join(gameId);
-        io.to(gameId).emit("gameReconnected", game);
+        emitToPlayers(io, game, "gameReconnected", game);
       } else {
         socket.join(gameId);
       }

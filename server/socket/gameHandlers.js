@@ -4,6 +4,18 @@ import { prisma } from "../db/index.js";
 export function registerGameHandlers(io, socket, games, userSockets) {
   const playerId = socket.playerId;
 
+  const emitToPlayers = (game, event, data) => {
+    if (!game || !game.players) return;
+    game.players.forEach((player) => {
+      const playerSockets = userSockets.get(player.playerId);
+      if (playerSockets) {
+        playerSockets.forEach((socketId) => {
+          io.to(socketId).emit(event, data);
+        });
+      }
+    });
+  };
+
   // Update open games in lobby
   const updateLobby = () => {
     const openGames = Object.values(games).filter(
@@ -85,7 +97,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
 
       console.log(`Player ${playerId} successfully joined game ${gameId}.`);
       socket.join(gameId);
-      io.to(gameId).emit("gameStart", game);
+      emitToPlayers(game, "gameStart", game);
       updateLobby();
     } catch (error) {
       console.error("Failed to join game:", error);
@@ -129,7 +141,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
 
       game.state = winner ? "game_over_win" : "game_over_draw";
       game.winner = winner?.playerId;
-      io.to(gameId).emit("gameOver", game);
+      emitToPlayers(game, "gameOver", game);
 
       // Schedule the finished game to be removed from the active cache later
       setTimeout(() => delete games[gameId], 60000);
@@ -139,7 +151,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       game.currentPlayer = game.players.find(
         (p) => p.playerId !== playerId,
       ).playerId;
-      io.to(gameId).emit("updateBoard", game);
+      emitToPlayers(game, "updateBoard", game);
     }
   });
 
@@ -213,7 +225,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
         joinAndNotifyAllSockets(player1, newGameId, games[newGameId]);
         joinAndNotifyAllSockets(player2, newGameId, games[newGameId]);
 
-        io.to(newGameId).emit("gameStart", games[newGameId]);
+        emitToPlayers(games[newGameId], "gameStart", games[newGameId]);
 
         delete games[gameId];
       } catch (error) {
@@ -374,7 +386,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       });
 
       // Notify the creator's client that the game has been successfully cancelled
-      io.to(gameId).emit("gameCancelled", gameId);
+      emitToPlayers(game, "gameCancelled", gameId);
 
       // Remove the game from the in-memory cache
       delete games[gameId];
@@ -445,7 +457,7 @@ export function registerGameHandlers(io, socket, games, userSockets) {
       game.state = "game_over_win";
       game.winner = opponent.playerId;
 
-      io.to(gameId).emit("gameOver", game);
+      emitToPlayers(game, "gameOver", game);
 
       setTimeout(() => delete games[gameId], 60000);
     } catch (error) {
