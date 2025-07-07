@@ -3,6 +3,10 @@
     "@babel/core": "^7.27.7",
     "@babel/preset-env": "^7.27.2",
     "@vitest/ui": "^3.2.4",
+    "prisma": "^6.11.1",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.11.1"
   }
 }
