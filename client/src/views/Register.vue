@@ -9,8 +9,10 @@
       <div class="form-group">
         <label for="password">Password</label>
         <div class="password-input-wrapper">
-          <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" required />
-          <button type="button" @click="showPassword = !showPassword" class="toggle-password">
+          <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" required
+            @focus="passwordHideButton = true" @blur="passwordHideButton = false" />
+          <button v-if="passwordHideButton" type="button" @click="showPassword = !showPassword" class="toggle-password"
+            @mousedown.prevent>
             {{ showPassword ? 'Hide' : 'Show' }}
           </button>
         </div>
@@ -18,8 +20,10 @@
       <div class="form-group">
         <label for="retype-password">Re-type Password</label>
         <div class="password-input-wrapper">
-          <input id="retype-password" v-model="retypePassword" :type="showPassword ? 'text' : 'password'" required />
-          <button type="button" @click="showPassword = !showPassword" class="toggle-password">
+          <input id="retype-password" v-model="retypePassword" :type="showPassword ? 'text' : 'password'" required
+            @focus="rePasswordHideButton = true" @blur="rePasswordHideButton = false" />
+          <button v-if="rePasswordHideButton" type="button" @click="showPassword = !showPassword" @mousedown.prevent
+            class="toggle-password">
             {{ showPassword ? 'Hide' : 'Show' }}
           </button>
         </div>
@@ -29,7 +33,8 @@
           <span class="icon">{{ !password ? '•' : (passwordRequirements.length ? '✓' : '✗') }}</span>
           At least 8 characters
         </li>
-        <li :class="{ 'valid': passwordRequirements.uppercase, 'invalid': !passwordRequirements.uppercase && password }">
+        <li
+          :class="{ 'valid': passwordRequirements.uppercase, 'invalid': !passwordRequirements.uppercase && password }">
           <span class="icon">{{ !password ? '•' : (passwordRequirements.uppercase ? '✓' : '✗') }}</span>
           Contains an uppercase letter
         </li>
@@ -52,14 +57,16 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 
+const authStore = useAuthStore();
+const router = useRouter();
+
 const username = ref('');
 const password = ref('');
 const retypePassword = ref('');
 const showPassword = ref(false);
+const passwordHideButton = ref(false);
+const rePasswordHideButton = ref(false);
 const errorMessage = ref(null);
-
-const authStore = useAuthStore();
-const router = useRouter();
 
 const passwordRequirements = computed(() => {
   const length = password.value.length >= 8;
