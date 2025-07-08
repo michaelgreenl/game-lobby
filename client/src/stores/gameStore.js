@@ -192,6 +192,15 @@ export const useGameStore = defineStore('game', () => {
     disconnectCountdown.value = 30;
   }
 
+  function resetGameStore() {
+    games.value = [];
+    game.value = {};
+    opponentDisconnected.value = false;
+    rematchRequested.value = false;
+    opponentWantsRematch.value = false;
+    stopDisconnectCountdown();
+  }
+
   return {
     games,
     game,
@@ -208,5 +217,6 @@ export const useGameStore = defineStore('game', () => {
     exitToLobby,
     checkForActiveGame,
     forfeitGame,
+    resetGameStore,
   };
 });

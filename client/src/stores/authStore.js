@@ -57,6 +57,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     function logout() {
+        const gameStore = useGameStore();
+        gameStore.resetGameStore();
+
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         token.value = null;
