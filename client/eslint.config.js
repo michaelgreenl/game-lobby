@@ -11,18 +11,18 @@ export default [
       sourceType: 'module',
       globals: {
         ...globals.browser, // Standard browser globals
-        node: true,         // Node.js globals (for config files, etc.)
+        node: true, // Node.js globals (for config files, etc.)
         es2021: true,
       },
     },
     // This allows eslint to resolve the `@` alias from vite.config.js
     settings: {
-        'import/resolver': {
-            alias: {
-                map: [['@', './src']],
-                extensions: ['.js', '.vue'],
-            },
+      'import/resolver': {
+        alias: {
+          map: [['@', './src']],
+          extensions: ['.js', '.vue'],
         },
+      },
     },
   },
 
@@ -33,4 +33,3 @@ export default [
   // The Prettier config MUST be last. It turns off conflicting rules.
   eslintConfigPrettier,
 ];
-

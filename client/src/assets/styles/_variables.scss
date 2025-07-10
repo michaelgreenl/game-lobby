@@ -6,15 +6,38 @@ $color-text-light: #f0f0f0;
 $color-text-medium: #cccccc;
 $color-text-dark: #888888;
 $color-accent: #6a0dad;
-$color-success: #4CAF50;
-$color-error: #F44336;
+$color-success: #4caf50;
+$color-error: #f44336;
 $color-border: #555555;
-$color-white: #C8D3F5;
-$color-blue: #82AAFF;
+$color-white: #c8d3f5;
+$color-blue: #82aaff;
 
 // Typography
-$primary-font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-$secondary-font-family: 'Bitcount', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+$primary-font-family:
+  'SF Pro Display',
+  'SF Pro Text',
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  sans-serif,
+  'Apple Color Emoji',
+  'Segoe UI Emoji',
+  'Segoe UI Symbol';
+$secondary-font-family:
+  'Bitcount',
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  sans-serif,
+  'Apple Color Emoji',
+  'Segoe UI Emoji',
+  'Segoe UI Symbol';
 $font-size-base: 1rem;
 $line-height-base: 1.6;
 $font-weight-light: 300;
@@ -26,22 +49,32 @@ $font-weight-bold: 700;
 $spacer: 1rem;
 $spacers: (
   0: 0,
-  1: ($spacer * .25),
+  1: (
+    $spacer * 0.25,
+  ),
   // 4px
-  2: ($spacer * .5),
+  2: (
+      $spacer * 0.5,
+    ),
   // 8px
   3: $spacer,
   // 16px
-  4: ($spacer * 1.5),
+  4: (
+      $spacer * 1.5,
+    ),
   // 24px
-  5: ($spacer * 2),
+  5: (
+      $spacer * 2,
+    ),
   // 32px
-  6: ($spacer * 3) // 48px
+  6: (
+      $spacer * 3,
+    ), // 48px
 );
 
 // Borders
 $border-width: 1px;
-$border-radius: .5rem; // Slightly more rounded corners
+$border-radius: 0.5rem; // Slightly more rounded corners
 
 // Box shadow (subtle for dark theme)
 $box-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);

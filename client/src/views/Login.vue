@@ -12,9 +12,7 @@
       </div>
       <button type="submit">Login</button>
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-      <p class="form-link">
-        Don't have an account? <router-link to="/register">Register</router-link>
-      </p>
+      <p class="form-link">Don't have an account? <router-link to="/register">Register</router-link></p>
     </form>
   </div>
 </template>
@@ -49,7 +47,7 @@ const handleLogin = async () => {
 <script>
 export default {
   name: 'LoginView',
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -104,7 +102,7 @@ export default {
     }
   }
 
-  button[type="submit"] {
+  button[type='submit'] {
     width: 100%;
     padding: map.get($spacers, 2);
     margin-top: map.get($spacers, 3);

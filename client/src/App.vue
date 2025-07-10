@@ -171,9 +171,9 @@ button {
   }
 }
 
-input[type="text"],
-input[type="password"],
-input[type="email"] {
+input[type='text'],
+input[type='password'],
+input[type='email'] {
   background-color: $color-background-medium;
   border: 1px solid $color-border;
   color: $color-text-light;

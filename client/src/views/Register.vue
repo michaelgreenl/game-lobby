@@ -1,4 +1,4 @@
-'''<template>
+<template>
   <div class="auth-container">
     <form @submit.prevent="handleRegister" class="auth-form">
       <h2>Register</h2>
@@ -29,25 +29,22 @@
         </div>
       </div>
       <ul class="password-requirements">
-        <li :class="{ 'valid': passwordRequirements.length, 'invalid': !passwordRequirements.length && password }">
-          <span class="icon">{{ !password ? '•' : (passwordRequirements.length ? '✓' : '✗') }}</span>
+        <li :class="{ valid: passwordRequirements.length, invalid: !passwordRequirements.length && password }">
+          <span class="icon">{{ !password ? '•' : passwordRequirements.length ? '✓' : '✗' }}</span>
           At least 8 characters
         </li>
-        <li
-          :class="{ 'valid': passwordRequirements.uppercase, 'invalid': !passwordRequirements.uppercase && password }">
-          <span class="icon">{{ !password ? '•' : (passwordRequirements.uppercase ? '✓' : '✗') }}</span>
+        <li :class="{ valid: passwordRequirements.uppercase, invalid: !passwordRequirements.uppercase && password }">
+          <span class="icon">{{ !password ? '•' : passwordRequirements.uppercase ? '✓' : '✗' }}</span>
           Contains an uppercase letter
         </li>
-        <li :class="{ 'valid': passwordRequirements.number, 'invalid': !passwordRequirements.number && password }">
-          <span class="icon">{{ !password ? '•' : (passwordRequirements.number ? '✓' : '✗') }}</span>
+        <li :class="{ valid: passwordRequirements.number, invalid: !passwordRequirements.number && password }">
+          <span class="icon">{{ !password ? '•' : passwordRequirements.number ? '✓' : '✗' }}</span>
           Contains a number
         </li>
       </ul>
       <button type="submit">Register</button>
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-      <p class="form-link">
-        Already have an account? <router-link to="/login">Login</router-link>
-      </p>
+      <p class="form-link">Already have an account? <router-link to="/login">Login</router-link></p>
     </form>
   </div>
 </template>
@@ -100,7 +97,7 @@ const handleRegister = async () => {
 <script>
 export default {
   name: 'RegisterView',
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -162,7 +159,7 @@ export default {
     align-items: center;
 
     input {
-      padding-right: 60px; // Make space for the button
+      padding-right: 60px;
     }
 
     .toggle-password {
@@ -211,7 +208,7 @@ export default {
     }
   }
 
-  button[type="submit"] {
+  button[type='submit'] {
     width: 100%;
     padding: map.get($spacers, 2);
     margin-top: map.get($spacers, 3);
