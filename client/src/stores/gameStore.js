@@ -137,9 +137,7 @@ export const useGameStore = defineStore('game', () => {
 
   function checkForActiveGame() {
     // First check if user has an active game in the games list
-    const activeGame = games.value.find((g) =>
-      g.players.some((p) => p.playerId === authStore.user?.id)
-    );
+    const activeGame = games.value.find((g) => g.players.some((p) => p.playerId === authStore.user?.id));
 
     if (activeGame) {
       // User has an active game, redirect to it immediately

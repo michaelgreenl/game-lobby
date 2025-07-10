@@ -56,8 +56,8 @@ onUnmounted(() => {
 
 <script>
 export default {
-  name: 'GameLobby'
-}
+  name: 'GameLobby',
+};
 </script>
 
 <style lang="scss" scoped>

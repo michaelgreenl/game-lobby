@@ -1,10 +1,20 @@
 <template>
   <div class="game-view-container" :key="route.params.id">
-    <GameBoard v-if="gameStore.game.id" :game="gameStore.game" :playerId="authStore.user?.id"
-      :opponentDisconnected="gameStore.opponentDisconnected" :rematchRequested="gameStore.rematchRequested"
-      :opponentWantsRematch="gameStore.opponentWantsRematch" :disconnectCountdown="gameStore.disconnectCountdown"
-      @rematch="gameStore.playAgain(gameStore.game.id)" @exitToLobby="exitToLobby" @move="makeMove"
-      @cancelGame="cancelGame" @createNewGame="createNewGame" @forfeit="forfeit" />
+    <GameBoard
+      v-if="gameStore.game.id"
+      :game="gameStore.game"
+      :playerId="authStore.user?.id"
+      :opponentDisconnected="gameStore.opponentDisconnected"
+      :rematchRequested="gameStore.rematchRequested"
+      :opponentWantsRematch="gameStore.opponentWantsRematch"
+      :disconnectCountdown="gameStore.disconnectCountdown"
+      @rematch="gameStore.playAgain(gameStore.game.id)"
+      @exitToLobby="exitToLobby"
+      @move="makeMove"
+      @cancelGame="cancelGame"
+      @createNewGame="createNewGame"
+      @forfeit="forfeit"
+    />
     <div v-else class="loading-game">
       <p>Loading game...</p>
     </div>
@@ -36,7 +46,7 @@ onMounted(() => {
 
   // Check if user is actually part of this game
   if (gameStore.game.id && gameStore.game.players) {
-    const isUserInGame = gameStore.game.players.some(p => p.playerId === authStore.user?.id);
+    const isUserInGame = gameStore.game.players.some((p) => p.playerId === authStore.user?.id);
     if (!isUserInGame) {
       // User is not in this game, check if they have an active game elsewhere
       const hasActiveGame = gameStore.checkForActiveGame();
@@ -49,11 +59,14 @@ onMounted(() => {
 });
 
 // Watch for changes to the route param and fetch the new game state
-watch(() => route.params.id, (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    socket.emit('fetchGameState', newId);
-  }
-});
+watch(
+  () => route.params.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      socket.emit('fetchGameState', newId);
+    }
+  },
+);
 
 function exitToLobby() {
   gameStore.exitToLobby();
@@ -79,8 +92,8 @@ function forfeit() {
 
 <script>
 export default {
-  name: "GameView",
-}
+  name: 'GameView',
+};
 </script>
 
 <style lang="scss" scoped>

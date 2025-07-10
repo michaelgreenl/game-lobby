@@ -4,9 +4,7 @@
       <span v-if="props.game.state === 'in_progress'">
         Opponent disconnected. Auto-forfeit in 0:{{ formattedCountdown }}
       </span>
-      <p v-else>
-        Opponent disconnected.
-      </p>
+      <p v-else>Opponent disconnected.</p>
     </div>
 
     <div v-if="props.game.state === 'waiting_for_player_2'" class="waiting-game">
@@ -16,8 +14,14 @@
     </div>
 
     <div v-else-if="props.game.state === 'in_progress'" class="active-game">
-      <button @click="emit('forfeit')" class="forfeit-button" :class="{ disabled: props.opponentDisconnected }"
-        :disabled="props.opponentDisconnected">Forfeit</button>
+      <button
+        @click="emit('forfeit')"
+        class="forfeit-button"
+        :class="{ disabled: props.opponentDisconnected }"
+        :disabled="props.opponentDisconnected"
+      >
+        Forfeit
+      </button>
       <h2>Game in Progress</h2>
       <p>Your symbol: {{ mySymbol }}</p>
       <p v-if="isMyTurn">It's your turn!</p>
@@ -33,18 +37,24 @@
       <p v-if="props.opponentWantsRematch" class="rematch-status">Opponent wants a rematch!</p>
       <div class="game-actions">
         <button @click="emit('createNewGame')" class="new-game-button">New Game</button>
-        <button :class="{ disabled: props.opponentDisconnected }" :disabled="props.opponentDisconnected"
-          @click="emit('rematch')" class="rematch-button">
+        <button
+          :class="{ disabled: props.opponentDisconnected }"
+          :disabled="props.opponentDisconnected"
+          @click="emit('rematch')"
+          class="rematch-button"
+        >
           Rematch
         </button>
         <button @click="emit('exitToLobby')" class="exit-button">Back to Lobby</button>
       </div>
     </div>
 
-    <div class="board" :class="{
-      disabled: !isMyTurn || props.opponentDisconnected ||
-        props.game.state != 'in_progress'
-    }">
+    <div
+      class="board"
+      :class="{
+        disabled: !isMyTurn || props.opponentDisconnected || props.game.state != 'in_progress',
+      }"
+    >
       <div class="cell" v-for="(cell, index) in props.game.board" :key="index" @click="cellClicked(index)">
         {{ cell }}
       </div>
@@ -68,7 +78,7 @@ const emit = defineEmits(['exitToLobby', 'rematch', 'move', 'cancelGame', 'creat
 
 const isMyTurn = computed(() => props.game.currentPlayer === props.playerId);
 const mySymbol = computed(() => {
-  const me = props.game.players?.find(p => p.playerId === props.playerId);
+  const me = props.game.players?.find((p) => p.playerId === props.playerId);
   return me ? me.symbol : '?';
 });
 
@@ -80,7 +90,7 @@ const cellClicked = (index) => {
 
 const formattedCountdown = computed(() => {
   return String(props.disconnectCountdown).padStart(2, '0');
-})
+});
 </script>
 
 <style lang="scss" scoped>

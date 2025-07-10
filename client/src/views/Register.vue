@@ -1,18 +1,30 @@
-'''<template>
+<template>
   <div class="auth-container">
     <form @submit.prevent="handleRegister" class="auth-form">
       <h2>Register</h2>
       <div class="form-group">
         <label for="username">Username</label>
-        <input id="username" v-model="username" type="text" required />
+        <input id="username" v-model="username" type="text" required :disabled="isLoading" />
       </div>
       <div class="form-group">
         <label for="password">Password</label>
         <div class="password-input-wrapper">
-          <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" required
-            @focus="passwordHideButton = true" @blur="passwordHideButton = false" />
-          <button v-if="passwordHideButton" type="button" @click="showPassword = !showPassword" class="toggle-password"
-            @mousedown.prevent>
+          <input
+            id="password"
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            required
+            @focus="passwordHideButton = true"
+            @blur="passwordHideButton = false"
+            :disabled="isLoading"
+          />
+          <button
+            v-if="passwordHideButton"
+            type="button"
+            @click="showPassword = !showPassword"
+            class="toggle-password"
+            @mousedown.prevent
+          >
             {{ showPassword ? 'Hide' : 'Show' }}
           </button>
         </div>
@@ -20,34 +32,48 @@
       <div class="form-group">
         <label for="retype-password">Re-type Password</label>
         <div class="password-input-wrapper">
-          <input id="retype-password" v-model="retypePassword" :type="showPassword ? 'text' : 'password'" required
-            @focus="rePasswordHideButton = true" @blur="rePasswordHideButton = false" />
-          <button v-if="rePasswordHideButton" type="button" @click="showPassword = !showPassword" @mousedown.prevent
-            class="toggle-password">
+          <input
+            id="retype-password"
+            v-model="retypePassword"
+            :type="showPassword ? 'text' : 'password'"
+            required
+            @focus="rePasswordHideButton = true"
+            @blur="rePasswordHideButton = false"
+            :disabled="isLoading"
+          />
+          <button
+            v-if="rePasswordHideButton"
+            type="button"
+            @click="showPassword = !showPassword"
+            @mousedown.prevent
+            class="toggle-password"
+          >
             {{ showPassword ? 'Hide' : 'Show' }}
           </button>
         </div>
       </div>
       <ul class="password-requirements">
-        <li :class="{ 'valid': passwordRequirements.length, 'invalid': !passwordRequirements.length && password }">
-          <span class="icon">{{ !password ? '•' : (passwordRequirements.length ? '✓' : '✗') }}</span>
+        <li :class="{ valid: passwordRequirements.length, invalid: !passwordRequirements.length && password }">
+          <span class="icon">{{ !password ? '•' : passwordRequirements.length ? '✓' : '✗' }}</span>
           At least 8 characters
         </li>
-        <li
-          :class="{ 'valid': passwordRequirements.uppercase, 'invalid': !passwordRequirements.uppercase && password }">
-          <span class="icon">{{ !password ? '•' : (passwordRequirements.uppercase ? '✓' : '✗') }}</span>
+        <li :class="{ valid: passwordRequirements.uppercase, invalid: !passwordRequirements.uppercase && password }">
+          <span class="icon">{{ !password ? '•' : passwordRequirements.uppercase ? '✓' : '✗' }}</span>
           Contains an uppercase letter
         </li>
-        <li :class="{ 'valid': passwordRequirements.number, 'invalid': !passwordRequirements.number && password }">
-          <span class="icon">{{ !password ? '•' : (passwordRequirements.number ? '✓' : '✗') }}</span>
+        <li :class="{ valid: passwordRequirements.number, invalid: !passwordRequirements.number && password }">
+          <span class="icon">{{ !password ? '•' : passwordRequirements.number ? '✓' : '✗' }}</span>
           Contains a number
         </li>
       </ul>
-      <button type="submit">Register</button>
+      {{ isLoading.value }}
+
+      <button type="submit" :disabled="isLoading">
+        <Loader v-if="isLoading" />
+        <span v-else> Register </span>
+      </button>
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-      <p class="form-link">
-        Already have an account? <router-link to="/login">Login</router-link>
-      </p>
+      <p class="form-link">Already have an account? <router-link to="/login">Login</router-link></p>
     </form>
   </div>
 </template>
@@ -56,6 +82,7 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
+import Loader from '../components/Loader.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -67,6 +94,7 @@ const showPassword = ref(false);
 const passwordHideButton = ref(false);
 const rePasswordHideButton = ref(false);
 const errorMessage = ref(null);
+const isLoading = ref(false);
 
 const passwordRequirements = computed(() => {
   const length = password.value.length >= 8;
@@ -87,12 +115,19 @@ const handleRegister = async () => {
   }
 
   errorMessage.value = null;
-  const result = await authStore.register(username.value, password.value);
+  isLoading.value = true;
+  try {
+    const result = await authStore.register(username.value, password.value);
 
-  if (result.success) {
-    router.push('/login');
-  } else {
-    errorMessage.value = result.message || 'Registration failed.';
+    if (result.success) {
+      router.push('/login');
+    } else {
+      errorMessage.value = result.message || 'Registration failed.';
+    }
+  } catch (error) {
+    errorMessage.value = 'An unexpected error occurred.';
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>
@@ -100,7 +135,7 @@ const handleRegister = async () => {
 <script>
 export default {
   name: 'RegisterView',
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -162,7 +197,7 @@ export default {
     align-items: center;
 
     input {
-      padding-right: 60px; // Make space for the button
+      padding-right: 60px;
     }
 
     .toggle-password {
@@ -211,12 +246,21 @@ export default {
     }
   }
 
-  button[type="submit"] {
+  button[type='submit'] {
     width: 100%;
     padding: map.get($spacers, 2);
     margin-top: map.get($spacers, 3);
     font-size: 1.1rem;
     font-weight: $font-weight-semibold;
+    // display: flex;
+    // justify-content: center;
+    // align-items: center;
+    min-height: 48px;
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
   }
 
   .error-message {
@@ -239,4 +283,3 @@ export default {
   }
 }
 </style>
-''
