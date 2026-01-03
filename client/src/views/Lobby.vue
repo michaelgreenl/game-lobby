@@ -10,7 +10,13 @@
         <ul>
           <li v-for="g in gameStore.games" :key="g.id" class="game-item">
             <span>Game with {{ g.players.length }} player(s)</span>
-            <button @click="gameStore.joinGame(g.id)" class="join-game-button" :aria-label="`Join game with ${g.players.length} players`">Join</button>
+            <button
+              @click="gameStore.joinGame(g.id)"
+              class="join-game-button"
+              :aria-label="`Join game with ${g.players.length} players`"
+            >
+              Join
+            </button>
           </li>
         </ul>
       </div>

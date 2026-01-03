@@ -271,9 +271,9 @@ const formattedCountdown = computed(() => {
     }
 
     &:disabled {
-        cursor: default;
-        // Keep contrast for X and O even if disabled
-        color: $color-white;
+      cursor: default;
+      // Keep contrast for X and O even if disabled
+      color: $color-white;
     }
   }
 
