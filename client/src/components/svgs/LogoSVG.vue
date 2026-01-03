@@ -9,6 +9,7 @@
     viewBox="0 0 188 188"
     aria-labelledby="logoTitle"
   >
+    <title id="logoTitle">GameLobby Logo</title>
     <g>
       <path
         fill="#ffffff"
