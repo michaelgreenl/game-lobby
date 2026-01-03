@@ -55,9 +55,16 @@
         disabled: !isMyTurn || props.opponentDisconnected || props.game.state != 'in_progress',
       }"
     >
-      <div class="cell" v-for="(cell, index) in props.game.board" :key="index" @click="cellClicked(index)">
+      <button
+        class="cell"
+        v-for="(cell, index) in props.game.board"
+        :key="index"
+        @click="cellClicked(index)"
+        :aria-label="`Row ${Math.floor(index / 3) + 1}, Column ${(index % 3) + 1}, ${cell ? cell : 'empty'}`"
+        :disabled="!!cell"
+      >
         {{ cell }}
-      </div>
+      </button>
     </div>
   </div>
 </template>
@@ -249,9 +256,24 @@ const formattedCountdown = computed(() => {
     color: $color-white;
     cursor: pointer;
     transition: background-color 0.2s ease;
+    border: none;
+    padding: 0;
+    margin: 0;
 
     &:hover {
       background-color: color.adjust($color-background-dark, $lightness: 5%);
+    }
+
+    &:focus-visible {
+      outline: none;
+      background-color: color.adjust($color-background-dark, $lightness: 10%);
+      box-shadow: inset 0 0 0 4px $color-accent;
+    }
+
+    &:disabled {
+        cursor: default;
+        // Keep contrast for X and O even if disabled
+        color: $color-white;
     }
   }
 

@@ -76,9 +76,12 @@ nav {
       padding: map.get($spacers, 1) map.get($spacers, 2);
       border-radius: $border-radius;
       transition: background-color 0.3s ease;
+      outline: none;
 
-      &:hover {
+      &:hover,
+      &:focus-visible {
         background-color: rgba($color-accent, 0.2);
+        box-shadow: 0 0 0 2px $color-accent;
       }
     }
 
@@ -91,9 +94,12 @@ nav {
       border-radius: $border-radius;
       cursor: pointer;
       transition: background-color 0.3s ease;
+      outline: none;
 
-      &:hover {
+      &:hover,
+      &:focus-visible {
         background-color: color.adjust($color-accent, $lightness: 10%);
+        box-shadow: 0 0 0 2px $color-text-light;
       }
     }
   }

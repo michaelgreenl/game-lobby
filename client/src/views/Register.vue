@@ -72,7 +72,7 @@
         <Loader v-if="isLoading" />
         <span v-else> Register </span>
       </button>
-      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="error-message" role="alert">{{ errorMessage }}</p>
       <p class="form-link">Already have an account? <router-link to="/login">Login</router-link></p>
     </form>
   </div>
