@@ -1,5 +1,5 @@
 # Game Lobby 👾
-> A real-time multiplayer application featuring a live lobby system via Socket.IO, secured by JWTs and supported by Prisma for persistent match history.
+> A real-time multiplayer game platform with Socket.IO-powered live lobbies, JWT-secured sessions, and server-authoritative in-memory match state for responsive gameplay.
 
 [![Vue.js](https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D)](https://vuejs.org/) [![Pinia](https://img.shields.io/badge/Pinia-F1C40F?style=for-the-badge&logo=pinia&logoColor=black)](https://pinia.vuejs.org/) [![Sass](https://img.shields.io/badge/Sass-CC6699?style=for-the-badge&logo=sass&logoColor=white)](https://sass-lang.com/)
 [![Node](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/) [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/) [![Socket.io](https://img.shields.io/badge/Socket.io-black?style=for-the-badge&logo=socket.io&badgeColor=010101)](https://socket.io/) 
@@ -30,7 +30,7 @@ This project leverages a Vue 3 (Vite) frontend paired with a Node.js/Express bac
 **Client-Authority Rejection:** All game logic is centralized on the server to prevent cheating. The client acts strictly as a rendering engine and input emitter, ensuring the integrity of the game state regardless of client-side manipulation attempts.
 
 ## 🛠️ Tech Stack
-- **Frontend:** Vue 3 (Composition API), Pinia, Sass (SCSS), GSAP (GreenStock)
+- **Frontend:** Vue 3 (Composition API), Pinia, Sass (SCSS) 
 - **Backend:** Node.js, Express, Socket.IO
 - **Database:** PostgreSQL, Prisma ORM
 - **Infrastructure:** Docker, Render, Github Pages, Github Actions
