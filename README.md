@@ -1,36 +1,46 @@
-# Game Lobby 👾
-> A real-time multiplayer game platform with Socket.IO-powered live lobbies, JWT-secured sessions, and server-authoritative in-memory match state for responsive gameplay.
+# Game Lobby
+> A real-time tic-tac-toe lobby with JWT-authenticated Socket.IO sessions, server-side move validation, rematches, forfeits, and disconnect recovery.
 
 [![Vue.js](https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D)](https://vuejs.org/) [![Pinia](https://img.shields.io/badge/Pinia-F1C40F?style=for-the-badge&logo=pinia&logoColor=black)](https://pinia.vuejs.org/) [![Sass](https://img.shields.io/badge/Sass-CC6699?style=for-the-badge&logo=sass&logoColor=white)](https://sass-lang.com/)
 [![Node](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/) [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/) [![Socket.io](https://img.shields.io/badge/Socket.io-black?style=for-the-badge&logo=socket.io&badgeColor=010101)](https://socket.io/) 
-[![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)](https://www.prisma.io/) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)](https://www.prisma.io/) 
 
-## 🔗 Links
-- **🚀 [Live Site](https://gamelobby.io)**
+## Links
+- **🌐 [Live Site](https://gamelobby.io)**
 - **🎥 [Demo Video](https://michaelgreenl.net/#projects?slug=game-lobby&autoplay=true)**
 - **💼 [Portfolio Link](https://michaelgreenl.net/#projects?slug=game-lobby&autoplay=false)** 
 
-## 📖 Overview
-> A resilient, real-time multiplayer gaming platform that eliminates connection-drop frustrations through a custom socket synchronization engine designed to handle tab switching and network instability seamlessly  
+## Overview
+Game Lobby is a two-player tic-tac-toe app where authenticated players create open games, join another player's game, and play through Socket.IO events.
 
-This project leverages a Vue 3 (Vite) frontend paired with a Node.js/Express backend, using Socket.IO for low-latency bidirectional communication. The architecture adopts a hybrid state strategy, interacting with PostgreSQL (via Prisma) for persistent records while utilizing high-performance in-memory structures for active game loops.
+The Vue 3/Vite client uses Pinia and Vue Router for auth state, lobby state, active-game redirects, and game-screen rendering. The Node.js/Express server stores users and game records in PostgreSQL through Prisma while keeping active boards, turn order, rematch requests, and connected sockets in memory during a match.
 
-## ⚡ Technical Highlights
-**Adaptive Connection Persistence:** Implemented a "soft-disconnect" pattern using the Page Visibility API (`visibilitychange`) to prevent instant game forfeiture when users switch tabs or minimize browsers, solving a common mobile web gaming pitfall.
+## Technical Highlights
+**Authenticated Sessions:** REST `/auth/register` and `/auth/login` routes hash passwords with `bcryptjs` and issue one-day JWTs. Socket.IO middleware verifies the JWT during the handshake before registering game handlers.
 
-**Global Socket-Session Mapping:** Engineered a `userSockets` registry on the server to track multiple socket IDs per user ID. This enables multi-tab support where a user remains "online" as long as at least one client instance is active.
+**Lobby and Active-Game Recovery:** The lobby receives open games through `updateGameList`. `checkActiveGame` and `fetchGameState` reconnect authenticated players to active games after refreshes or route changes.
 
-**Secure WebSocket Handshakes:** Extended strict JWT authentication into the Socket.IO connection phase, validating credentials during the initial handshake request rather than relying solely on message-level checks.
+**Server-Side Game Validation:** `makeMove` accepts moves only from the current player and only into empty cells, then the server checks win/draw state before broadcasting `updateBoard` or `gameOver`.
 
-**Optimized In-Memory Game State:** Decoupled the active game loop from the database layer, performing game logic updates in memory for sub-millisecond response times and only committing final results to PostgreSQL.
+**Disconnect Recovery:** Each user maps to a set of socket IDs for multi-tab sessions. Hidden tabs wait five seconds before disconnecting, and in-progress disconnects start a 30-second auto-forfeit timer that is cleared on reconnect.
 
-## 🏗️ Architecture & Design Decisions 
-**Active vs. Persistent Data Separation:** To maximize performance, the system avoids database writes during gameplay. The "source of truth" shifts temporarily to the server's memory during a match and syncs back to PostgreSQL only when the game concludes (Win/Loss), significantly reducing database I/O overhead.
+**Game Controls:** Players can cancel waiting games, forfeit in-progress games, and start rematches after both players request one.
 
-**Client-Authority Rejection:** All game logic is centralized on the server to prevent cheating. The client acts strictly as a rendering engine and input emitter, ensuring the integrity of the game state regardless of client-side manipulation attempts.
+**Server Tests:** Vitest tests cover invalid socket tokens, create/join flow, wins, draws, rematches, cancel, forfeit, and first-disconnect notification.
 
-## 🛠️ Tech Stack
-- **Frontend:** Vue 3 (Composition API), Pinia, Sass (SCSS) 
-- **Backend:** Node.js, Express, Socket.IO
+## Architecture & Design Decisions 
+**Active vs. Persistent State:** Active board state lives in the server's `games` object so moves do not write to the database. Prisma persists users and game lifecycle/result fields when games are created, joined, cancelled, finished, or forfeited.
+
+**Client as Event Emitter:** The Vue client renders server state and emits game intents such as `createGame`, `joinGame`, `makeMove`, `forfeitGame`, and `playerReadyForRematch`. Server handlers decide whether each state change is valid.
+
+## Tech Stack
+- **Frontend:** Vue 3 (Composition API), Vite, Vue Router, Pinia, Socket.IO client, Sass (SCSS)
+- **Backend:** Node.js, Express 5, Socket.IO 4, JSON Web Tokens, bcryptjs
 - **Database:** PostgreSQL, Prisma ORM
-- **Infrastructure:** Docker, Render, Github Pages, Github Actions
+- **Local/dev/deploy:** Docker Compose for PostgreSQL, Vitest server tests, GitHub Actions workflow for GitHub Pages client deployment
+
+## Run Locally
+- Start PostgreSQL: `docker compose up -d db`.
+- Server: set `DATABASE_URL`, `JWT_SECRET`, and `FRONTEND_URL`, then run `cd server && npm install && npm run build && npm run dev`.
+- Client: set `VITE_API_URL`, then run `cd client && npm install && npm run dev`.
+- Server tests: `cd server && npm test`.
