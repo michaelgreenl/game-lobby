@@ -7,11 +7,8 @@
 
 ## Links
 - **🌐 [Live Site](https://gamelobby.io)**
+- **🎥 [Demo Video](https://michaelgreenl.net/#projects?slug=game-lobby&autoplay=true)**
 - **💼 [Portfolio Link](https://michaelgreenl.net/#projects?slug=game-lobby&autoplay=false)** 
-
-## Demo Video
-
-https://github.com/user-attachments/assets/d2e8a629-e915-4f85-845a-d1522d9d0c16
 
 ## Overview
 Game Lobby is a two-player tic-tac-toe app where authenticated players create open games, join another player's game, and play through Socket.IO events.
